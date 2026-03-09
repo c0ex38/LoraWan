@@ -1,6 +1,34 @@
 # 📡 LoRaWAN Spreading Factor & Network Capacity Simulator
 
-Bu proje, Akıllı Şehir senaryolarında (örneğin 1000+ akıllı çöp kutusu) LoRaWAN ağ performansını analiz etmek için geliştirilmiş profesyonel bir **Discrete Event Simulation** framework'üdür.
+Bu proje, LoRaWAN ağlarının fiziksel katman (PHY) ve MAC katmanı davranışlarını bir Akıllı Şehir senaryosu üzerinden simüle eden kapsamlı bir analiz aracıdır. Temel amacı, cihaz yoğunluğu arttıkça ağın kapasite sınırlarını, paket kayıp nedenlerini ve enerji verimliliğini bilimsel modellerle ortaya koymaktır.
+
+## 🧐 Proje Ne Yapıyor?
+
+Simülasyon, bir şehre dağıtılmış binlerce akıllı sensörün (örneğin akıllı çöp kutuları) ve onları dinleyen birden fazla Gateway'in (baz istasyonu) davranışlarını şu adımlarla taklit eder:
+
+### 1. Akıllı Konumlandırma ve Radyo Modelleme
+
+- **Şehir Planlama:** Belirlenen bir alanda (örneğin 10km²) sensörleri rastgele dağıtır.
+- **Gerçekçi Sinyal Kaybı:** Sadece mesafe değil, şehir içindeki bina ve engelleri temsil eden **Log-Normal Shadowing** (gölgeleme) efektlerini kullanarak RSSI ve SNR değerlerini hesaplar.
+
+### 2. Dinamik ADR (Adaptive Data Rate) Kontrolü
+
+- Her cihaz, sinyal kalitesine (SNR) göre en verimli **Spreading Factor (SF7-SF12)** değerini seçer. Gateway'e yakın cihazlar SF7 ile yüksek hızda, uzak cihazlar SF12 ile yüksek hassasiyette iletişim kurar.
+
+### 3. Zaman Tabanlı (Discrete Event) Trafik Simülasyonu
+
+- Cihazlar saniye saniye takip edilir. Her cihazın ne zaman paket göndereceği, paketin havada kalma süresi (**Time on Air**) ve hangi frekansta olduğu hesaplanır.
+
+### 4. Karmaşık Paket Kayıp Analizi
+
+Proje, paketlerin neden ulaşmadığını iki ana nedene dayandırır:
+
+- **Çakışmalar (Collisions):** Aynı anda, aynı kanal ve SF'de gelen paketlerin birbirini bozması (SIR - Sinyal Girişim Oranı bazlı).
+- **Gateway Körlüğü (Blindness):** LoRaWAN gateway'leri genelde "Half-Duplex"tir. Bir gateway bir cihaza onay (ACK) gönderirken, o sırada gelen diğer hiçbir paketi duyamaz. Proje bu kritik kaybı detaylıca analiz eder.
+
+### 5. Enerji ve Pil Ömrü Tahmini
+
+- Her paket gönderiminde tüketilen mili-joule (mJ) cinsinden enerji hesaplanır ve cihazların pil ömürleri (yıl bazında) SF değerlerine göre raporlanır.
 
 ## 🌟 Öne Çıkan Özellikler
 
