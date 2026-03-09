@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg') # Flask/Thread güvenliği için GUI olmayan backend kullan
 import matplotlib.pyplot as plt
 import numpy as np
 from .utils import calculate_time_on_air, calculate_bit_rate
@@ -25,7 +27,7 @@ def plot_sf_analysis(results):
     plt.title('LoRaWAN SF Analysis: Time on Air vs Data Rate')
     fig.tight_layout()
     plt.savefig('assets/plots/sf_analysis_plot.png')
-    print("Graph saved as images/sf_analysis_plot.png")
+    print("Graph saved as assets/plots/sf_analysis_plot.png")
 
 def plot_theoretical_limits():
     sfs = range(7, 13)
@@ -48,7 +50,7 @@ def plot_theoretical_limits():
 
     plt.tight_layout()
     plt.savefig('assets/plots/theoretical_limits.png')
-    print("Theoretical limits graph saved as images/theoretical_limits.png")
+    print("Theoretical limits graph saved as assets/plots/theoretical_limits.png")
 
 def plot_spatial_distribution(sim):
     """
@@ -76,7 +78,7 @@ def plot_spatial_distribution(sim):
     plt.legend()
     plt.axis('equal')
     plt.savefig('assets/plots/city_map_sf_distribution.png')
-    print("Multi-Gateway map saved as images/city_map_sf_distribution.png")
+    print("Multi-Gateway map saved as assets/plots/city_map_sf_distribution.png")
 
 def plot_energy_analysis(results):
     """
@@ -109,13 +111,13 @@ def plot_energy_analysis(results):
     plt.title('LoRaWAN SF Impact on Battery Life and Energy')
     fig.tight_layout()
     plt.savefig('assets/plots/energy_analysis.png')
-    print("Energy analysis plot saved as images/energy_analysis.png")
+    print("Energy analysis plot saved as assets/plots/energy_analysis.png")
 
 def plot_collision_analysis(results):
     """
     Ağ yoğunluğu arttıkça çakışma olasılığını analiz eder.
     """
-    from utils import calculate_collision_probability
+    from .utils import calculate_collision_probability
     
     device_counts = np.linspace(10, 1000, 10)
     intervals = [3600, 600, 60] # 1 saat, 10 dk, 1 dk
@@ -136,7 +138,7 @@ def plot_collision_analysis(results):
     plt.grid(True)
     plt.legend()
     plt.savefig('assets/plots/collision_analysis.png')
-    print("Collision analysis plot saved as images/collision_analysis.png")
+    print("Collision analysis plot saved as assets/plots/collision_analysis.png")
 
 def plot_signal_quality(results):
     """
@@ -169,13 +171,13 @@ def plot_signal_quality(results):
 
     plt.tight_layout()
     plt.savefig('assets/plots/signal_quality.png')
-    print("Signal quality plot saved as images/signal_quality.png")
+    print("Signal quality plot saved as assets/plots/signal_quality.png")
 
 def plot_pdr_analysis(sim_class, area_size=5000):
     """
     Farklı cihaz yoğunluklarında Packet Delivery Ratio (PDR) ve kayıp nedenleri analizi.
     """
-    from traffic_sim import TrafficSimulator
+    from .traffic_sim import TrafficSimulator
     
     device_counts = [50, 200, 500, 1000, 2000]
     pdrs = []
@@ -221,7 +223,7 @@ def plot_pdr_analysis(sim_class, area_size=5000):
 
     plt.tight_layout()
     plt.savefig('assets/plots/network_pdr_analysis.png')
-    print("Detailed PDR analysis plot saved as images/network_pdr_analysis.png")
+    print("Detailed PDR analysis plot saved as assets/plots/network_pdr_analysis.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation

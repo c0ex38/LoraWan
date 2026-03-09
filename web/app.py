@@ -1,7 +1,13 @@
+import os
+import sys
+
+# Projenin kök dizinini sys.path'e ekle (Importlardan ÖNCE olmalı)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os
-import subprocess
 import json
 from core.simulation import SmartCitySimulation
 from core.traffic_sim import TrafficSimulator
@@ -10,8 +16,7 @@ from core import visualizer
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-# Ana dizini ve resim dizinini belirle
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Resim dizinini belirle
 IMAGES_DIR = os.path.join(BASE_DIR, 'assets', 'plots')
 
 @app.route('/')
