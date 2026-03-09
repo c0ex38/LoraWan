@@ -173,33 +173,55 @@ def plot_signal_quality(results):
 
 def plot_pdr_analysis(sim_class, area_size=5000):
     """
-    Farklı cihaz yoğunluklarında Packet Delivery Ratio (PDR) analizi.
+    Farklı cihaz yoğunluklarında Packet Delivery Ratio (PDR) ve kayıp nedenleri analizi.
     """
     from traffic_sim import TrafficSimulator
     
-    device_counts = [20, 50, 100, 200, 500]
+    device_counts = [50, 200, 500, 1000, 2000]
     pdrs = []
+    collisions = []
+    blindness = []
     
-    print("\nRunning Stress Test for PDR Analysis...")
+    print("\nRunning Professional Stress Test (Downlink & Blindness Analysis)...")
     for count in device_counts:
-        temp_sim = sim_class(num_bins=count, area_size=area_size)
+        temp_sim = sim_class(num_bins=count, area_size=area_size, num_gateways=4)
         results = temp_sim.run_analysis()
-        traffic = TrafficSimulator(results, duration_seconds=1800) # 30 dk simülasyon
-        traffic.generate_traffic(interval_seconds=300) # 5 dk aralık
+        traffic = TrafficSimulator(results, duration_seconds=1800)
+        traffic.generate_traffic(interval_seconds=300)
         stats = traffic.run_collision_analysis()
+        
         pdrs.append(stats['pdr'])
-        print(f"Devices: {count} | PDR: {stats['pdr']:.2f}%")
+        total = stats['total_packets']
+        collisions.append((stats['collision'] / total) * 100 if total > 0 else 0)
+        blindness.append((stats['blindness'] / total) * 100 if total > 0 else 0)
+        
+        print(f"Devices: {count} | PDR: {stats['pdr']:.2f}% | Blind: {stats['blindness']} | Coll: {stats['collision']}")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(device_counts, pdrs, marker='s', color='purple', linewidth=2)
-    plt.axhline(y=90, color='r', linestyle='--', label='90% Reliability Threshold')
-    plt.title('Network Scalability: Packet Delivery Ratio (PDR)')
-    plt.xlabel('Number of Smart Bins')
+    plt.figure(figsize=(12, 7))
+    
+    # PDR Çizgisi
+    plt.subplot(2, 1, 1)
+    plt.plot(device_counts, pdrs, marker='s', color='purple', linewidth=2, label='Success Rate (PDR)')
+    plt.axhline(y=90, color='r', linestyle='--', label='90% Reliability')
+    plt.title('End-to-End Reliability with Downlink ACK')
     plt.ylabel('PDR (%)')
     plt.grid(True)
     plt.legend()
+
+    # Kayıp Nedenleri (Stacked Bar)
+    plt.subplot(2, 1, 2)
+    plt.bar(range(len(device_counts)), collisions, label='Loss: Collision', color='orange')
+    plt.bar(range(len(device_counts)), blindness, bottom=collisions, label='Loss: GW Blindness (Half-Duplex)', color='red')
+    plt.xticks(range(len(device_counts)), device_counts)
+    plt.title('Analysis of Packet Loss Causes')
+    plt.xlabel('Number of Smart Bins')
+    plt.ylabel('Loss Rate (%)')
+    plt.legend()
+    plt.grid(axis='y', linestyle=':')
+
+    plt.tight_layout()
     plt.savefig('images/network_pdr_analysis.png')
-    print("PDR analysis plot saved as images/network_pdr_analysis.png")
+    print("Detailed PDR analysis plot saved as images/network_pdr_analysis.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
