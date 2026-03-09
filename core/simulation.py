@@ -32,49 +32,104 @@ class SmartCitySimulation:
         self.all_gw_stats = [] # Her cihaz için: {gw_id: {'rssi': x, 'snr': y}, ...}
         self.best_gateways = []
         self.distances = [] 
+        self.device_statuses = [] # 'ACTIVE', 'FAILED'
+        self.failure_reasons = [] # 'DEAD', 'JAMMED', 'NO_LINK'
 
         types = ['BIN', 'LIGHT', 'WATER', 'AIR']
         
-        for i, pos in enumerate(self.bin_positions):
+        # Kaos Senaryosu Parametreleri
+        self.is_chaos = scenario == 'CHAOS'
+        self.jammer_pos = np.array([1000, 1000]) if self.is_chaos else None
+
+        for i in range(self.num_bins):
+            # Cihaz Tipi ve SF Seçimi
             d_type = types[i % 4]
-            self.device_types.append(d_type)
+            self.device_types.append(d_type) # Populate device_types list
+            pos = self.bin_positions[i]
             
-            indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
+            # Faz 20: Kaos Arızası (%5 ihtimalle cihaz bozuk)
+            is_dead = self.is_chaos and np.random.random() < 0.05
             
             gw_stats = {}
-            best_snr = -999
-            best_gw_idx = 0
+            best_gw_idx = -1
+            best_snr = -float('inf')
             
-            for gw_idx, gw_pos in enumerate(self.gateways):
+            for g_idx, gw_pos in enumerate(self.gateways):
                 d = np.linalg.norm(pos - gw_pos)
+                indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
+                
+                # Standart Path Loss
+                pl = calculate_path_loss(d) + indoor_loss
+                
+                # Shadowing (from original code)
                 shadowing_std = 12 if self.scenario == 'STORM' else 6
                 shadowing = np.random.normal(-10 if self.scenario == 'STORM' else 0, shadowing_std)
                 
-                pl = calculate_path_loss(d) + shadowing + indoor_loss
-                rssi = self.tx_power - pl
+                # Faz 20: Derin Sönümlenme (Deep Fading) - Rastgelelik artırıldı
+                fading = np.random.uniform(-10, 5) if self.is_chaos else 0
+                
+                # Faz 20: Jamming Etkisi (Sinyal Karıştırıcı)
+                jamming = 0
+                if self.is_chaos:
+                    dist_to_jammer = np.linalg.norm(pos - self.jammer_pos)
+                    if dist_to_jammer < 500: # 500m yarıçapında etkili
+                        jamming = 30 # 30dB bastırma
+                
+                rssi = self.tx_power - pl + shadowing + fading - jamming
                 snr = rssi - self.noise_floor
                 
-                gw_stats[gw_idx] = {'rssi': rssi, 'snr': snr, 'dist': d}
+                gw_stats[g_idx] = {
+                    'rssi': rssi,
+                    'snr': snr,
+                    'dist': d,
+                    'fading': fading,
+                    'jamming': jamming
+                }
                 
                 if snr > best_snr:
                     best_snr = snr
-                    best_gw_idx = gw_idx
+                    best_gw_idx = g_idx
             
-            # ADR: En iyi link için SF seç
-            best_sf = 12
-            for sf in [7, 8, 9, 10, 11, 12]:
-                if best_snr >= get_required_snr(sf) + 5:
-                    best_sf = sf
-                    break
+            # ADR ve SF Seçimi
+            best_sf = 7
+            status = 'ACTIVE'
+            failure_reason = None
+
+            if is_dead:
+                status = 'FAILED'
+                failure_reason = 'DEAD'
+                best_sf = -1 # Indicate failure with SF -1
+            elif best_snr < get_required_snr(12): # If even SF12 sensitivity is not met
+                status = 'FAILED'
+                failure_reason = 'NO_LINK'
+                best_sf = -1
+            else:
+                for sf_val in range(7, 13):
+                    if best_snr >= get_required_snr(sf_val) + 5:
+                        best_sf = sf_val
+                        break
+                else:
+                    best_sf = 12 # Default to SF12 if no better SF found but link is possible
             
+            # Kayıtlar
             self.bin_sfs.append(best_sf)
             self.all_gw_stats.append(gw_stats)
             self.best_gateways.append(best_gw_idx)
-            self.distances.append(gw_stats[best_gw_idx]['dist'])
+            self.distances.append(gw_stats[best_gw_idx]['dist'] if best_gw_idx != -1 else 0) # Handle no link case
+            self.device_statuses.append(status)
+            self.failure_reasons.append(failure_reason)
         
-        # Faz 18: Geriye dönük uyumluluk ve stabilite için best link stats
-        self.bin_rssis = [self.all_gw_stats[j][self.best_gateways[j]]['rssi'] for j in range(self.num_bins)]
-        self.bin_snrs = [self.all_gw_stats[j][self.best_gateways[j]]['snr'] for j in range(self.num_bins)]
+        # Faz 18: Geriye dönük uyumluluk
+        # Ensure these lists are populated correctly even if best_gw_idx is -1 for some devices
+        self.bin_rssis = []
+        self.bin_snrs = []
+        for j in range(self.num_bins):
+            if self.best_gateways[j] != -1:
+                self.bin_rssis.append(self.all_gw_stats[j][self.best_gateways[j]]['rssi'])
+                self.bin_snrs.append(self.all_gw_stats[j][self.best_gateways[j]]['snr'])
+            else:
+                self.bin_rssis.append(-float('inf')) # Indicate no valid RSSI
+                self.bin_snrs.append(-float('inf')) # Indicate no valid SNR
             
     def run_analysis(self):
         results = []
@@ -125,6 +180,8 @@ class SmartCitySimulation:
             results.append({
                 'id': i,
                 'type': d_type,
+                'status': self.device_statuses[i],
+                'failure_reason': self.failure_reasons[i],
                 'distance': self.distances[i],
                 'sf': sf,
                 'rssi': self.bin_rssis[i],

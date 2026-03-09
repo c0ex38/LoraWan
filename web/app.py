@@ -112,8 +112,11 @@ def run_simulation():
                 yield log_yield("Adım 10/11: Gateway Diversity (Yedeklilik) haritası üretiliyor...")
                 visualizer.plot_gateway_redundancy(sim)
 
-                yield log_yield("Adım 11/11: Spektral Verimlilik (Inter-SF) analizi üretiliyor...")
+                yield log_yield("Adım 11/12: Spektral Verimlilik (Inter-SF) analizi üretiliyor...")
                 visualizer.plot_spectral_efficiency(traffic_stats)
+
+                yield log_yield("Adım 12/12: Kaos & Güvenilirlik (Reliability) haritası üretiliyor...")
+                visualizer.plot_reliability_heatmap(sim)
                 
             except Exception as plot_err:
                 yield log_yield(f"GÖRSELLEŞTİRME HATASI: {str(plot_err)}")

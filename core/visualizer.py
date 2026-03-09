@@ -511,9 +511,42 @@ def plot_spectral_efficiency(traffic_results):
     plt.title("Ağ Spektral Verimlilik ve Girişim Dağılımı\nFaz 19: Capture Effect & Inter-SF Analizi")
     plt.axis('equal')
     
-    plt.savefig('assets/plots/spectral_efficiency.png', dpi=150, bbox_inches='tight')
+def plot_reliability_heatmap(sim):
+    """
+    Güvenilirlik Haritası ve Kritik Hata Alanları Analizi.
+    Faz 20: Chaos Analysis
+    """
+    plt.figure(figsize=(10, 8))
+    
+    # Arızalı cihazları bul
+    failed_indices = [i for i, s in enumerate(sim.device_statuses) if s == 'FAILED']
+    active_indices = [i for i, s in enumerate(sim.device_statuses) if s == 'ACTIVE']
+    
+    # Arka plan (Heatmap benzeri)
+    plt.scatter(sim.bin_positions[active_indices, 0], sim.bin_positions[active_indices, 1], 
+                c='blue', alpha=0.1, label='Stabil Bölgeler')
+    
+    # Hatalı noktaları büyük kırmızı X ile işaretle
+    if failed_indices:
+        plt.scatter(sim.bin_positions[failed_indices, 0], sim.bin_positions[failed_indices, 1], 
+                    marker='x', color='red', s=80, label='Kritik Hata (Kaos)')
+        
+    # Jammer'ı işaretle
+    if sim.is_chaos and sim.jammer_pos is not None:
+        plt.scatter(sim.jammer_pos[0], sim.jammer_pos[1], marker='*', color='yellow', 
+                    s=300, edgecolors='black', label='Jamming Kaynağı', zorder=10)
+        circle = plt.Circle(sim.jammer_pos, 500, color='red', fill=True, alpha=0.2, label='Etki Alanı')
+        plt.gca().add_patch(circle)
+
+    plt.title("Ağ Güvenilirlik ve Kaos Analizi Haritası\nFaz 20: Donanım Arızası & Jamming Etkisi")
+    plt.xlabel("X (m)")
+    plt.ylabel("Y (m)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend()
+    
+    plt.savefig('assets/plots/reliability_heatmap.png', dpi=150, bbox_inches='tight')
     plt.close('all')
-    print("Spectral Efficiency plot saved as assets/plots/spectral_efficiency.png")
+    print("Reliability heatmap saved as assets/plots/reliability_heatmap.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation

@@ -15,6 +15,10 @@ class TrafficSimulator:
         is_festival = scenario == 'FESTIVAL'
 
         for dev in self.devices:
+            # Faz 20: Eğer cihaz arızalıysa paket göndermez
+            if dev.get('status') == 'FAILED':
+                continue
+                
             d_type = dev.get('type', 'BIN')
             
             # Cihaz Tipine Göre Interval (Saniye)
