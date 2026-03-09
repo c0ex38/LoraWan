@@ -29,62 +29,52 @@ class SmartCitySimulation:
         self.noise_floor = calculate_noise_floor() 
         self.device_types = [] # 'BIN', 'LIGHT', 'WATER', 'AIR'
         self.bin_sfs = []
-        self.bin_rssis = []
-        self.bin_snrs = []
+        self.all_gw_stats = [] # Her cihaz için: {gw_id: {'rssi': x, 'snr': y}, ...}
         self.best_gateways = []
         self.distances = [] 
 
         types = ['BIN', 'LIGHT', 'WATER', 'AIR']
         
         for i, pos in enumerate(self.bin_positions):
-            # Cihaz Tipi Ata
             d_type = types[i % 4]
             self.device_types.append(d_type)
             
-            # Cihaz Tipine Göre Ek Kayıplar (Penetrasyon)
-            indoor_loss = 0
-            if d_type == 'WATER': # Su sayaçları bodrumda
-                indoor_loss = 20
-            elif d_type == 'BIN':
-                indoor_loss = 5 # Metal kutu etkisi
+            indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
             
+            gw_stats = {}
             best_snr = -999
-            best_rssi = -999
-            best_sf = 12
             best_gw_idx = 0
-            min_dist = 99999
             
             for gw_idx, gw_pos in enumerate(self.gateways):
                 d = np.linalg.norm(pos - gw_pos)
-                shadowing_std = 6
-                if self.scenario == 'STORM':
-                    shadowing_std = 12
-                    shadowing = np.random.normal(-10, shadowing_std)
-                else:
-                    shadowing = np.random.normal(0, shadowing_std)
+                shadowing_std = 12 if self.scenario == 'STORM' else 6
+                shadowing = np.random.normal(-10 if self.scenario == 'STORM' else 0, shadowing_std)
                 
                 pl = calculate_path_loss(d) + shadowing + indoor_loss
                 rssi = self.tx_power - pl
                 snr = rssi - self.noise_floor
                 
-                # En iyi gateway'i seç (En yüksek SNR)
+                gw_stats[gw_idx] = {'rssi': rssi, 'snr': snr, 'dist': d}
+                
                 if snr > best_snr:
                     best_snr = snr
-                    best_rssi = rssi
                     best_gw_idx = gw_idx
-                    min_dist = d
             
             # ADR: En iyi link için SF seç
+            best_sf = 12
             for sf in [7, 8, 9, 10, 11, 12]:
                 if best_snr >= get_required_snr(sf) + 5:
                     best_sf = sf
                     break
             
             self.bin_sfs.append(best_sf)
-            self.bin_rssis.append(best_rssi)
-            self.bin_snrs.append(best_snr)
+            self.all_gw_stats.append(gw_stats)
             self.best_gateways.append(best_gw_idx)
-            self.distances.append(min_dist)
+            self.distances.append(gw_stats[best_gw_idx]['dist'])
+        
+        # Faz 18: Geriye dönük uyumluluk ve stabilite için best link stats
+        self.bin_rssis = [self.all_gw_stats[j][self.best_gateways[j]]['rssi'] for j in range(self.num_bins)]
+        self.bin_snrs = [self.all_gw_stats[j][self.best_gateways[j]]['snr'] for j in range(self.num_bins)]
             
     def run_analysis(self):
         results = []
@@ -131,13 +121,15 @@ class SmartCitySimulation:
             # FAZ 17: Noise Floor
             noise_floor = calculate_noise_floor()
 
+            
             results.append({
                 'id': i,
                 'type': d_type,
                 'distance': self.distances[i],
                 'sf': sf,
-                'rssi': rssi,
-                'snr': snr,
+                'rssi': self.bin_rssis[i],
+                'snr': self.bin_snrs[i],
+                'all_gw_stats': self.all_gw_stats[i],
                 'link_margin': margin,
                 'noise_floor': noise_floor,
                 'gateway_id': self.best_gateways[i],

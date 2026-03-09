@@ -2,7 +2,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from .utils import calculate_time_on_air, calculate_bit_rate
+from .utils import (
+    calculate_time_on_air, get_required_snr, calculate_path_loss, calculate_bit_rate
+)
 
 def plot_sf_analysis(results):
     sfs = [r['sf'] for r in results]
@@ -436,14 +438,52 @@ def plot_signal_vs_noise(results):
 
     plt.title('LoRa Physics: Signal vs Noise (Sub-Noise Recovery Probability)')
     plt.xlabel('Cihaz Örneği (Sample)')
-    plt.ylabel('Güç Seviyesi (dBm)')
-    plt.ylim(-145, -80)
-    plt.grid(True, linestyle=':', alpha=0.5)
-    plt.legend()
-    
     plt.savefig('assets/plots/signal_noise_analysis.png')
     plt.close('all')
     print("Signal vs Noise plot saved as assets/plots/signal_noise_analysis.png")
+
+def plot_gateway_redundancy(sim):
+    """
+    Teknik Analiz: Her noktanın kaç farklı Gateway tarafından kapsandığını (Redundaancy) gösterir.
+    Faz 18: Macro-Diversity İspatı
+    """
+    grid_res = 30
+    half_size = sim.area_size / 2
+    x = np.linspace(-half_size, half_size, grid_res)
+    y = np.linspace(-half_size, half_size, grid_res)
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros_like(X)
+
+    for i in range(grid_res):
+        for j in range(grid_res):
+            pos = np.array([X[i,j], Y[i,j]])
+            count = 0
+            for gw_pos in sim.gateways:
+                d = np.linalg.norm(pos - gw_pos)
+                pl = calculate_path_loss(d)
+                rssi = sim.tx_power - pl
+                # Teknik Limit: SF12 bile olsa -125 dBm altı duyulamaz
+                if rssi > -120: 
+                    count += 1
+            Z[i,j] = count
+
+    plt.figure(figsize=(10, 8))
+    # 'viridis' veya 'plasma' renk paleti redundancy için iyidir
+    im = plt.pcolormesh(X, Y, Z, shading='auto', cmap='plasma', alpha=0.8)
+    plt.colorbar(im, label='Kapsayan Gateway Sayısı (Redundancy)')
+    
+    # Gateway'leri çiz
+    plt.scatter(sim.gateways[:,0], sim.gateways[:,1], marker='^', s=200, color='white', edgecolors='black', label='Gateway', zorder=5)
+    
+    plt.title("Ağ Yedeklilik (Gateway Redundancy) Haritası\nFaz 18: Macro-Diversity Analizi")
+    plt.xlabel("X (m)")
+    plt.ylabel("Y (m)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend()
+    
+    plt.savefig('assets/plots/gateway_redundancy.png', dpi=150, bbox_inches='tight')
+    plt.close('all')
+    print("Gateway Redundancy plot saved as assets/plots/gateway_redundancy.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation

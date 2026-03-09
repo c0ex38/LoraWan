@@ -123,6 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('img_signal_noise')) {
                 document.getElementById('img_signal_noise').src = `/images/signal_noise_analysis.png?t=${t}`;
             }
+            if (document.getElementById('img_redundancy')) {
+                document.getElementById('img_redundancy').src = `/images/gateway_redundancy.png?t=${t}`;
+            }
             
             if (document.getElementById('img_theoretical')) {
                 document.getElementById('img_theoretical').src = `/images/theoretical_limits.png?t=${t}`;
@@ -240,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setImg('img_pdr', 'network_pdr_analysis.png');
             setImg('img_energy', 'energy_analysis.png');
             setImg('img_signal', 'signal_quality.png');
+            setImg('img_redundancy', 'gateway_redundancy.png');
             
             // Konsolu Temizle ve Bilgi Ver
             const logWindow = document.getElementById('sim_logs');

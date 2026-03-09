@@ -67,45 +67,65 @@ class TrafficSimulator:
         for i, p1 in enumerate(self.packets):
             dev_id = p1['device_id']
             device_stats[dev_id]['total'] += 1
-            gw_id = p1['gateway_id']
             
-            # 1. Gateway Körlüğü Kontrolü
-            is_blind = False
-            for busy_start, busy_end in gw_busy_slots[gw_id]:
-                if not (p1['end_time'] < busy_start or p1['start_time'] > busy_end):
-                    is_blind = True
+            # Cihazın duyulabildiği tüm gateway'leri kontrol et (Macro-Diversity)
+            all_gw_stats = next(d['all_gw_stats'] for d in self.devices if d['id'] == dev_id)
+            
+            packet_received_by_any_gw = False
+            
+            for gw_id_str, stats in all_gw_stats.items():
+                gw_id = int(gw_id_str)
+                # RSSI çok düşükse bu gateway zaten duyamaz (-130 dBm altı)
+                if stats['rssi'] < -130: continue
+                
+                # 1. Gateway Körlüğü Kontrolü (Bu spesifik GW için)
+                is_blind = False
+                for busy_start, busy_end in gw_busy_slots[gw_id]:
+                    if not (p1['end_time'] < busy_start or p1['start_time'] > busy_end):
+                        is_blind = True
+                        break
+                
+                if is_blind: continue
+
+                # 2. Çakışma Kontrolü (Bu spesifik GW ve Kanal için)
+                collision = False
+                for j, p2 in enumerate(self.packets):
+                    if i == j: continue
+                    # Aynı gateway ve aynı kanalda çakışma olur
+                    overlap = not (p1['end_time'] < p2['start_time'] or p2['end_time'] < p1['start_time'])
+                    same_channel = (p1['channel_id'] == p2['channel_id'])
+                    
+                    # ÖNEMLİ: P2 de bu Gateway tarafından duyuluyor mu?
+                    p2_dev = next(d for d in self.devices if d['id'] == p2['device_id'])
+                    p2_at_this_gw = p2_dev['all_gw_stats'].get(str(gw_id))
+                    
+                    if overlap and same_channel and p2_at_this_gw:
+                        p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_at_this_gw['rssi'])
+                        if not p1_survives:
+                            collision = True
+                            break
+                
+                if not collision:
+                    # Bu gateway paketi başarıyla aldı!
+                    packet_received_by_any_gw = True
+                    # Başarılı alım sonrası ACK penceresi için GW'yı meşgul et
+                    ack_start = p1['end_time'] + 1.0
+                    ack_end = ack_start + (calculate_time_on_air(10, p1['sf']) / 1000)
+                    gw_busy_slots[gw_id].append((ack_start, ack_end))
+                    # Bir gateway alması yeterli (De-duplication)
                     break
             
-            if is_blind:
-                p1['status'] = 'GW_BLIND'
-                blindness_count += 1
-                continue
-
-            # 2. Çakışma Kontrolü
-            collision = False
-            for j, p2 in enumerate(self.packets):
-                if i == j: continue
-                overlap = not (p1['end_time'] < p2['start_time'] or p2['end_time'] < p1['start_time'])
-                same_channel = (p1['channel_id'] == p2['channel_id'])
-                if overlap and same_channel:
-                    p1_survives = check_collision_sir(p1['sf'], p2['sf'], p1['rssi'], p2['rssi'])
-                    if not p1_survives:
-                        collision = True
-                        break
-            
-            if collision:
-                p1['status'] = 'COLLIDED'
-                collision_count += 1
-                continue
-            
-            # 3. Başarı ve ACK
-            if p1['status'] == 'SUCCESS':
+            if packet_received_by_any_gw:
+                p1['status'] = 'SUCCESS'
                 success_count += 1
                 device_stats[dev_id]['success'] += 1
-                ack_start = p1['end_time'] + 1.0
-                ack_end = ack_start + (calculate_time_on_air(10, p1['sf']) / 1000)
-                gw_busy_slots[gw_id].append((ack_start, ack_end))
-        
+            else:
+                # Hiçbir GW alamadıysa en son hata durumunu ata (Basitleştirme için)
+                p1['status'] = 'FAILED'
+                # İstatistiksel takip için (opsiyonel)
+                if is_blind: blindness_count += 1
+                elif collision: collision_count += 1
+
         # Cihaz listesine PDR ekle
         for dev in self.devices:
             d_stat = device_stats[dev['id']]

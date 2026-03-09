@@ -106,8 +106,11 @@ def run_simulation():
                 yield log_yield("Adım 8/9: Link Margin (Bağlantı Payı) ispatı üretiliyor...")
                 visualizer.plot_link_margin(results)
                 
-                yield log_yield("Adım 9/9: Sub-Noise (Gürültü Altı İletişim) analizi üretiliyor...")
+                yield log_yield("Adım 9/10: Sub-Noise (Gürültü Altı İletişim) analizi üretiliyor...")
                 visualizer.plot_signal_vs_noise(results)
+
+                yield log_yield("Adım 10/10: Gateway Diversity (Yedeklilik) haritası üretiliyor...")
+                visualizer.plot_gateway_redundancy(sim)
                 
             except Exception as plot_err:
                 yield log_yield(f"GÖRSELLEŞTİRME HATASI: {str(plot_err)}")
