@@ -49,8 +49,10 @@ def run_simulation():
     def generate():
         logs = []
         def log_yield(msg):
-            logs.append(msg)
-            return f"data: {msg}\n\n"
+            import sys
+            print(f"[LOG] {msg}")
+            sys.stdout.flush()
+            return f"data: LOG:{msg}\n\n"
 
         try:
             yield log_yield(f"Simülasyon başlatılıyor (Senaryo: {scenario})...")
@@ -76,23 +78,51 @@ def run_simulation():
             yield log_yield("Paket çakışmaları ve ağ kapasite analizi yapılıyor...")
             traffic_stats = traffic.run_collision_analysis()
             
-            # 3. Grafikler
-            yield log_yield("Hibrit şehir haritası ve kapsama analizleri üretiliyor...")
-            visualizer.plot_spatial_distribution(sim)
-            visualizer.plot_coverage_heatmap(sim, results)
-            visualizer.plot_neighborhood_stats(results)
-            visualizer.plot_signal_quality(results)
-            visualizer.plot_device_type_stats(results)
-            visualizer.plot_academic_constraints(results) # NEW (Faz 15)
-            visualizer.plot_link_margin(results) # NEW (Faz 16)
+            # 3. Grafikler (Adım Adım Loglama)
+            yield log_yield("Görselleştirme Katmanı Hazırlanıyor...")
+            
+            try:
+                yield log_yield("Adım 1/9: Hibrit Şehir Haritası üretiliyor...")
+                visualizer.plot_spatial_distribution(sim)
+                
+                yield log_yield("Adım 2/9: Kapsama Isı Haritası (Grid Analizi) üretiliyor...")
+                visualizer.plot_coverage_heatmap(sim, results)
+                
+                yield log_yield("Adım 3/9: Mahalle Bazlı PDR analizi yapılıyor...")
+                visualizer.plot_neighborhood_stats(results)
+                
+                yield log_yield("Adım 4/9: Sinyal Kalitesi (RSSI/SNR) dağılımı üretiliyor...")
+                visualizer.plot_signal_quality(results)
+                
+                yield log_yield("Adım 5/9: Pil Ömrü ve Enerji tüketim projeksiyonu üretiliyor...")
+                visualizer.plot_energy_analysis(results)
+                
+                yield log_yield("Adım 6/9: Cihaz Tipi spesifik performans stats üretiliyor...")
+                visualizer.plot_device_type_stats(results)
+                
+                yield log_yield("Adım 7/9: LoRaWAN Akademik Kısıtlar (MTU/Duty) grafiği üretiliyor...")
+                visualizer.plot_academic_constraints(results)
+                
+                yield log_yield("Adım 8/9: Link Margin (Bağlantı Payı) ispatı üretiliyor...")
+                visualizer.plot_link_margin(results)
+                
+                yield log_yield("Adım 9/9: Sub-Noise (Gürültü Altı İletişim) analizi üretiliyor...")
+                visualizer.plot_signal_vs_noise(results)
+                
+            except Exception as plot_err:
+                yield log_yield(f"GÖRSELLEŞTİRME HATASI: {str(plot_err)}")
+                print(f"Plot Error: {plot_err}")
             
             if is_full_suite:
-                yield log_yield("İleri Analiz: Teorik limitler ve detaylı PDR stres testi işleniyor...")
+                yield log_yield("İleri Analiz: Teorik limitler ve PDR stres testi (Ağ Kapasite) işleniyor...")
                 visualizer.plot_theoretical_limits()
                 visualizer.plot_collision_analysis(results)
+                
+                yield log_yield("KRİTİK: Bilimsel PDR Stres Testi (Bu işlem uzun sürebilir, bağlantıyı kesmeyin)...")
                 visualizer.plot_pdr_analysis(SmartCitySimulation, area_size=area_size) 
             
-            yield log_yield("Simülasyon ve hibrit analizler başarıyla tamamlandı.")
+            yield log_yield("Simülasyon ve tüm bilimsel analizler başarıyla tamamlandı.")
+            yield log_yield("Sonuçlar arşivleniyor ve raporlanıyor...")
             
             stats_data = {
                 'num_bins': num_bins,
@@ -100,6 +130,7 @@ def run_simulation():
                 'pdr': round(traffic_stats['pdr'], 2),
                 'blindness': traffic_stats['blindness'],
                 'collision': traffic_stats['collision'],
+                'avg_latency': round(sum(r['toa'] for r in results) / len(results), 2) if results else 0,
                 'scenario': scenario
             }
             
@@ -128,13 +159,17 @@ def run_simulation():
                     'img_signal_path': '/images/signal_quality.png',
                     'img_device_type_path': '/images/device_type_analysis.png',
                     'img_academic_path': '/images/academic_constraints.png',
-                    'img_margin_path': '/images/link_margin_analysis.png'
+                    'img_margin_path': '/images/link_margin_analysis.png',
+                    'img_signal_noise_path': '/images/signal_noise_analysis.png'
                 }
             }
             yield f"data: RESULT:{json.dumps(final_data)}\n\n"
             
         except Exception as e:
-            yield f"data: HATA: {str(e)}\n\n"
+            import traceback
+            error_msg = f"KRİTİK HATA: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
+            yield f"data: {error_msg}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
@@ -177,4 +212,5 @@ if __name__ == '__main__':
     # Klasörler yoksa oluştur
     os.makedirs(IMAGES_DIR, exist_ok=True)
     os.makedirs(HISTORY_DIR, exist_ok=True)
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    # use_reloader=False: Grafik dosyaları kaydedildiğinde sunucunun kapanmasını engeller
+    app.run(host='0.0.0.0', port=8000, debug=True, use_reloader=False)

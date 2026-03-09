@@ -167,3 +167,12 @@ def calculate_link_margin(current_snr, sf):
     """
     req_snr = get_required_snr(sf)
     return current_snr - req_snr
+
+def calculate_noise_floor(bw=125, noise_figure=6):
+    """
+    Termal Gürültü Tabanı (Noise Floor) Hesabı.
+    Noise Floor (dBm) = -174 + 10 * log10(BW_Hz) + Noise Figure
+    """
+    bw_hz = bw * 1000
+    noise_floor = -174 + 10 * math.log10(bw_hz) + noise_figure
+    return noise_floor

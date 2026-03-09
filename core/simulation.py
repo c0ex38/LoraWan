@@ -1,7 +1,8 @@
 from .utils import (
     calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, 
     calculate_path_loss, get_required_snr, get_sf_sensitivity,
-    calculate_duty_cycle_off_time, get_mtu_limit, calculate_link_margin
+    calculate_duty_cycle_off_time, get_mtu_limit, calculate_link_margin,
+    calculate_noise_floor
 )
 import numpy as np
 
@@ -25,7 +26,7 @@ class SmartCitySimulation:
         
         # Faz 4: Sinyal ve GW Seçim Parametreleri
         self.tx_power = 14 
-        self.noise_floor = -110 
+        self.noise_floor = calculate_noise_floor() 
         self.device_types = [] # 'BIN', 'LIGHT', 'WATER', 'AIR'
         self.bin_sfs = []
         self.bin_rssis = []
@@ -126,6 +127,9 @@ class SmartCitySimulation:
             
             # FAZ 16: Link Margin
             margin = calculate_link_margin(snr, sf)
+            
+            # FAZ 17: Noise Floor
+            noise_floor = calculate_noise_floor()
 
             results.append({
                 'id': i,
@@ -135,6 +139,7 @@ class SmartCitySimulation:
                 'rssi': rssi,
                 'snr': snr,
                 'link_margin': margin,
+                'noise_floor': noise_floor,
                 'gateway_id': self.best_gateways[i],
                 'toa': toa,
                 'off_time': off_time,

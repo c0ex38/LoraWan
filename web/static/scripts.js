@@ -100,13 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.status === 'success') {
             document.getElementById('stat_bins').innerText = data.stats.num_bins.toLocaleString();
             
-            // Belediye Tasarruf Tahmini (Simülatif mantık: Cihaz başına PDR verimliliği ile)
-            const baseSavingPerBin = 650; // TL (Güncel akaryakıt ve personel maliyet projeksiyonu)
-            const totalSaving = Math.round(data.stats.num_bins * (data.stats.pdr / 100) * baseSavingPerBin);
-            document.getElementById('stat_savings').innerText = `₺${(totalSaving/1000).toFixed(1)}K`;
             
             document.getElementById('stat_pdr').innerText = data.stats.pdr + '%';
-            document.getElementById('stat_blindness').innerText = data.stats.blindness;
+            document.getElementById('stat_blindness').innerText = data.stats.avg_latency + ' ms';
 
             const t = new Date().getTime();
             document.getElementById('img_map').src = `/images/city_map_sf_distribution.png?t=${t}`;
@@ -123,6 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (document.getElementById('img_margin')) {
                 document.getElementById('img_margin').src = `/images/link_margin_analysis.png?t=${t}`;
+            }
+            if (document.getElementById('img_signal_noise')) {
+                document.getElementById('img_signal_noise').src = `/images/signal_noise_analysis.png?t=${t}`;
             }
             
             if (document.getElementById('img_theoretical')) {
@@ -155,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (document.getElementById('img_margin')) {
             document.getElementById('img_margin').src = `/history-images/${simId}/link_margin_analysis.png`;
+        }
+        if (document.getElementById('img_signal_noise')) {
+            document.getElementById('img_signal_noise').src = `/history-images/${simId}/signal_noise_analysis.png`;
         }
         
         alert(`${simId} detayları yüklendi.`);
@@ -222,14 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setVal('stat_bins', data.stats.num_bins.toLocaleString());
             setVal('stat_pdr', data.stats.pdr + '%');
-            setVal('stat_blindness', data.stats.blindness);
+            setVal('stat_blindness', (data.stats.avg_latency || 0) + ' ms');
 
-            // Tasarruf Yeniden Hesapla (Arşiv için)
-            if (document.getElementById('stat_savings')) {
-                const baseSavingPerBin = 650;
-                const totalSaving = Math.round(data.stats.num_bins * (data.stats.pdr / 100) * baseSavingPerBin);
-                document.getElementById('stat_savings').innerText = `₺${(totalSaving/1000).toFixed(1)}K`;
-            }
             
             // Grafikleri Geçmişten Yükle (Güvenli Kontrol)
             const t = new Date().getTime();

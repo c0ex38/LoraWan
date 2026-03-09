@@ -90,19 +90,18 @@
                 </div>
             </section>
 
-            <!-- KPI Cards -->
             <section class="stats-grid">
                 <div class="card" style="border-left: 4px solid var(--primary);">
                     <span class="stat-label">Aktif Konteynır</span>
-                    <span id="stat_bins" class="stat-value">1,000</span>
+                    <span id="stat_bins" class="stat-value">0</span>
                 </div>
                 <div class="card" style="border-left: 4px solid var(--accent);">
                     <span class="stat-label">Saha Verimliliği (PDR)</span>
                     <span id="stat_pdr" class="stat-value" style="color: var(--accent);">0.0%</span>
                 </div>
                 <div class="card" style="border-left: 4px solid #ef4444;">
-                    <span class="stat-label">Kayıp Veri Oranı</span>
-                    <span id="stat_blindness" class="stat-value" style="color: #ef4444;">0.0%</span>
+                    <span class="stat-label">Ortalama Gecikme (ToA)</span>
+                    <span id="stat_blindness" class="stat-value" style="color: #ef4444;">0 ms</span>
                 </div>
             </section>
 
@@ -148,6 +147,12 @@
                     <h3>Link Margin (Bağlantı Payı)</h3>
                     <p class="subtitle" style="margin-bottom: 1rem;">SNR vs Eşik Değeri: Bağlantı güvenilirliği ve ADR potansiyeli</p>
                     <img id="img_margin" src="/images/link_margin_analysis.png" alt="Link Margin Analizi">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Gürültü Altı İletişim (Sub-Noise)</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">Signal vs Noise: Negatif SNR durumunda veri kurtarma başarısı</p>
+                    <img id="img_signal_noise" src="/images/signal_noise_analysis.png" alt="Sub-Noise Analizi">
                 </div>
 
                 <div class="chart-card">

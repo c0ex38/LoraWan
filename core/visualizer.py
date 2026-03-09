@@ -27,6 +27,7 @@ def plot_sf_analysis(results):
     plt.title('LoRaWAN SF Analysis: Time on Air vs Data Rate')
     fig.tight_layout()
     plt.savefig('assets/plots/sf_analysis_plot.png')
+    plt.close('all')
     print("Graph saved as assets/plots/sf_analysis_plot.png")
 
 def plot_theoretical_limits():
@@ -50,6 +51,7 @@ def plot_theoretical_limits():
 
     plt.tight_layout()
     plt.savefig('assets/plots/theoretical_limits.png')
+    plt.close('all')
     print("Theoretical limits graph saved as assets/plots/theoretical_limits.png")
 
 def plot_spatial_distribution(sim):
@@ -77,6 +79,7 @@ def plot_spatial_distribution(sim):
     plt.legend()
     plt.axis('equal')
     plt.savefig('assets/plots/city_map_sf_distribution.png')
+    plt.close('all')
     print("Hybrid Map saved as assets/plots/city_map_sf_distribution.png")
 
 def plot_device_type_stats(results):
@@ -107,6 +110,7 @@ def plot_device_type_stats(results):
     plt.title('Hibrit Hizmet Analizi: Cihaz Tipi Bazlı Performans & Ömür')
     fig.tight_layout()
     plt.savefig('assets/plots/device_type_analysis.png')
+    plt.close('all')
     print("Device type analysis saved as assets/plots/device_type_analysis.png")
 
 def plot_energy_analysis(results):
@@ -146,6 +150,7 @@ def plot_energy_analysis(results):
     plt.title('LoRaWAN SF Impact on Battery Life and Energy')
     fig.tight_layout()
     plt.savefig('assets/plots/energy_analysis.png')
+    plt.close('all')
     print("Energy analysis plot saved as assets/plots/energy_analysis.png")
 
 def plot_collision_analysis(results):
@@ -177,6 +182,7 @@ def plot_collision_analysis(results):
     plt.grid(True)
     plt.legend()
     plt.savefig('assets/plots/collision_analysis.png')
+    plt.close('all')
     print("Collision analysis plot saved as assets/plots/collision_analysis.png")
 
 def plot_signal_quality(results):
@@ -210,6 +216,7 @@ def plot_signal_quality(results):
 
     plt.tight_layout()
     plt.savefig('assets/plots/signal_quality.png')
+    plt.close('all')
     print("Signal quality plot saved as assets/plots/signal_quality.png")
 
 def plot_pdr_analysis(sim_class, area_size=5000):
@@ -225,6 +232,7 @@ def plot_pdr_analysis(sim_class, area_size=5000):
     
     print("\nRunning Professional Stress Test (Downlink & Blindness Analysis)...")
     for count in device_counts:
+        print(f"--- Stres Testi: {count} cihaz simüle ediliyor...")
         temp_sim = sim_class(num_bins=count, area_size=area_size, num_gateways=4)
         results = temp_sim.run_analysis()
         traffic = TrafficSimulator(results, duration_seconds=1800)
@@ -236,7 +244,11 @@ def plot_pdr_analysis(sim_class, area_size=5000):
         collisions.append((stats['collision'] / total) * 100 if total > 0 else 0)
         blindness.append((stats['blindness'] / total) * 100 if total > 0 else 0)
         
-        print(f"Devices: {count} | PDR: {stats['pdr']:.2f}% | Blind: {stats['blindness']} | Coll: {stats['collision']}")
+        print(f"Cihaz: {count} | Başarı: {stats['pdr']:.2f}% | Kayıp (Çakışma): {stats['collision']} | Kayıp (Blind): {stats['blindness']}")
+        # Bellek temizliği için küçük bir güvence
+        del temp_sim
+        del results
+        del traffic
 
     plt.figure(figsize=(12, 7))
     
@@ -262,6 +274,7 @@ def plot_pdr_analysis(sim_class, area_size=5000):
 
     plt.tight_layout()
     plt.savefig('assets/plots/network_pdr_analysis.png')
+    plt.close('all')
     print("Detailed PDR analysis plot saved as assets/plots/network_pdr_analysis.png")
 
 def plot_coverage_heatmap(sim, results):
@@ -297,6 +310,7 @@ def plot_coverage_heatmap(sim, results):
     plt.ylabel('Y (m)')
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.savefig('assets/plots/coverage_heatmap.png')
+    plt.close('all')
     print("Coverage heatmap saved as assets/plots/coverage_heatmap.png")
 
 def plot_neighborhood_stats(results):
@@ -321,6 +335,7 @@ def plot_neighborhood_stats(results):
         plt.text(i, v + 2, f"%{v:.1f}", ha='center', fontweight='bold')
         
     plt.savefig('assets/plots/neighborhood_analysis.png')
+    plt.close('all')
     print("Neighborhood analysis saved as assets/plots/neighborhood_analysis.png")
 
 def plot_academic_constraints(results):
@@ -355,6 +370,7 @@ def plot_academic_constraints(results):
     plt.title('LoRaWAN Academic Constraints: MTU vs Duty Cycle Privacy')
     fig.tight_layout()
     plt.savefig('assets/plots/academic_constraints.png')
+    plt.close('all')
     print("Academic constraints plot saved as assets/plots/academic_constraints.png")
 
 def plot_link_margin(results):
@@ -388,7 +404,46 @@ def plot_link_margin(results):
     plt.legend()
     
     plt.savefig('assets/plots/link_margin_analysis.png')
+    plt.close('all')
     print("Link margin plot saved as assets/plots/link_margin_analysis.png")
+
+def plot_signal_vs_noise(results):
+    """
+    Signal (RSSI) vs Noise Floor karşılaştırması ve Sub-Noise Recovery görselleştirmesi.
+    """
+    # İlk 50 cihazı örnek alalım (Daha temiz görünüm için)
+    res_sample = results[:50]
+    ids = range(len(res_sample))
+    rssis = [r['rssi'] for r in res_sample]
+    noise_floor = res_sample[0]['noise_floor'] if res_sample else -113
+    
+    plt.figure(figsize=(12, 6))
+    
+    # Noise Floor (Sabit Çizgi)
+    plt.axhline(y=noise_floor, color='#ef4444', linestyle='--', linewidth=2, label=f'Noise Floor ({noise_floor:.1f} dBm)')
+    
+    # RSSI (Noktalar)
+    plt.scatter(ids, rssis, c='#3b82f6', label='RSSI (Sinyal Gücü)', alpha=0.7, edgecolors='white')
+    
+    # Sub-Noise Bölgesi (Gürültü Altı)
+    plt.fill_between(ids, noise_floor, -145, color='gray', alpha=0.1, label='Sub-Noise Region (Negative SNR)')
+    
+    # Oklarla vurgu
+    for i, r in enumerate(res_sample):
+        if r['rssi'] < noise_floor:
+            plt.annotate('', xy=(i, r['rssi']), xytext=(i, noise_floor),
+                         arrowprops=dict(arrowstyle='<->', color='purple', alpha=0.3))
+
+    plt.title('LoRa Physics: Signal vs Noise (Sub-Noise Recovery Probability)')
+    plt.xlabel('Cihaz Örneği (Sample)')
+    plt.ylabel('Güç Seviyesi (dBm)')
+    plt.ylim(-145, -80)
+    plt.grid(True, linestyle=':', alpha=0.5)
+    plt.legend()
+    
+    plt.savefig('assets/plots/signal_noise_analysis.png')
+    plt.close('all')
+    print("Signal vs Noise plot saved as assets/plots/signal_noise_analysis.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
