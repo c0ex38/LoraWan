@@ -121,6 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('img_academic')) {
                 document.getElementById('img_academic').src = `/images/academic_constraints.png?t=${t}`;
             }
+            if (document.getElementById('img_margin')) {
+                document.getElementById('img_margin').src = `/images/link_margin_analysis.png?t=${t}`;
+            }
             
             if (document.getElementById('img_theoretical')) {
                 document.getElementById('img_theoretical').src = `/images/theoretical_limits.png?t=${t}`;
@@ -149,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (document.getElementById('img_academic')) {
             document.getElementById('img_academic').src = `/history-images/${simId}/academic_constraints.png`;
+        }
+        if (document.getElementById('img_margin')) {
+            document.getElementById('img_margin').src = `/history-images/${simId}/link_margin_analysis.png`;
         }
         
         alert(`${simId} detayları yüklendi.`);

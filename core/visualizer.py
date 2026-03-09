@@ -357,6 +357,39 @@ def plot_academic_constraints(results):
     plt.savefig('assets/plots/academic_constraints.png')
     print("Academic constraints plot saved as assets/plots/academic_constraints.png")
 
+def plot_link_margin(results):
+    """
+    SNR vs Required SNR ve Link Margin (Güvenlik Payı) görselleştirmesi.
+    """
+    from .utils import get_required_snr
+    
+    ids = range(len(results))
+    snrs = [r['snr'] for r in results]
+    req_snrs = [get_required_snr(r['sf']) for r in results]
+    margins = [r['link_margin'] for r in results]
+    
+    plt.figure(figsize=(12, 6))
+    
+    # SNR Çizgileri
+    plt.plot(ids, snrs, label='Mevcut SNR (dB)', color='#3b82f6', marker='o', markersize=4, linestyle='-', alpha=0.8)
+    plt.plot(ids, req_snrs, label='Gereken Min. SNR (Threshold)', color='#ef4444', linestyle='--', linewidth=2)
+    
+    # Margin Boyama (Güvenlik Bölgesi)
+    plt.fill_between(ids, req_snrs, snrs, where=(np.array(snrs) >= np.array(req_snrs)), 
+                     color='green', alpha=0.2, label='Güvenli Bölge (Link Margin)')
+    
+    plt.fill_between(ids, req_snrs, snrs, where=(np.array(snrs) < np.array(req_snrs)), 
+                     color='red', alpha=0.3, label='Riskli / Kopma Noktası')
+    
+    plt.title('Link Margin Analizi: Bağlantı Güvenlik Payı & ADR Potansiyeli')
+    plt.xlabel('Cihaz ID')
+    plt.ylabel('Sinyal Kalitesi (SNR - dB)')
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.legend()
+    
+    plt.savefig('assets/plots/link_margin_analysis.png')
+    print("Link margin plot saved as assets/plots/link_margin_analysis.png")
+
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
     sim = SmartCitySimulation(num_bins=50, area_size=7000)

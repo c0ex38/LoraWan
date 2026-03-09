@@ -84,6 +84,7 @@ def run_simulation():
             visualizer.plot_signal_quality(results)
             visualizer.plot_device_type_stats(results)
             visualizer.plot_academic_constraints(results) # NEW (Faz 15)
+            visualizer.plot_link_margin(results) # NEW (Faz 16)
             
             if is_full_suite:
                 yield log_yield("İleri Analiz: Teorik limitler ve detaylı PDR stres testi işleniyor...")
@@ -126,7 +127,8 @@ def run_simulation():
                     'img_energy_path': '/images/energy_analysis.png',
                     'img_signal_path': '/images/signal_quality.png',
                     'img_device_type_path': '/images/device_type_analysis.png',
-                    'img_academic_path': '/images/academic_constraints.png'
+                    'img_academic_path': '/images/academic_constraints.png',
+                    'img_margin_path': '/images/link_margin_analysis.png'
                 }
             }
             yield f"data: RESULT:{json.dumps(final_data)}\n\n"

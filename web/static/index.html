@@ -96,11 +96,6 @@
                     <span class="stat-label">Aktif Konteynır</span>
                     <span id="stat_bins" class="stat-value">1,000</span>
                 </div>
-                <div class="card" style="border-left: 4px solid var(--secondary); position: relative;">
-                    <span class="stat-label">Yıllık Tahmini Tasarruf</span>
-                    <span id="stat_savings" class="stat-value" style="color: var(--secondary);">₺0K</span>
-                    <div class="info-icon" style="position: absolute; top: 15px; right: 15px; cursor: help; color: var(--text-muted); font-size: 0.8rem;" title="Hesaplama: (Cihaz Sayısı x PDR x ₺650) - Operasyonel verimlilik projeksiyonu.">ⓘ</div>
-                </div>
                 <div class="card" style="border-left: 4px solid var(--accent);">
                     <span class="stat-label">Saha Verimliliği (PDR)</span>
                     <span id="stat_pdr" class="stat-value" style="color: var(--accent);">0.0%</span>
@@ -150,6 +145,12 @@
                 </div>
 
                 <div class="chart-card">
+                    <h3>Link Margin (Bağlantı Payı)</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">SNR vs Eşik Değeri: Bağlantı güvenilirliği ve ADR potansiyeli</p>
+                    <img id="img_margin" src="/images/link_margin_analysis.png" alt="Link Margin Analizi">
+                </div>
+
+                <div class="chart-card">
                     <h3>Ölçeklenebilirlik & Körlük Analizi</h3>
                     <img id="img_pdr" src="/images/network_pdr_analysis.png" alt="PDR Analizi">
                 </div>
@@ -167,50 +168,6 @@
                 <div class="chart-card">
                     <h3>Teorik Sınırlar</h3>
                     <img id="img_theoretical" src="/images/theoretical_limits.png" alt="Teorik Limitler">
-                </div>
-            </section>
-
-            <!-- Municipal Insights Section -->
-            <section class="education-section" style="margin-top: 3rem;">
-                <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
-                    <span>🏛️</span> Belediye Operasyonel Avantajları
-                </h2>
-                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent);">
-                        <h3 style="color: var(--primary); margin-bottom: 0.8rem;">⛽ Akaryakıt Tasarrufu</h3>
-                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
-                            Sadece doluluk oranı %80 ve üzeri olan konteynırlara rota çizilerek, gereksiz seferler engellenir. LoRaWAN sayesinde bu veri düşük maliyetle toplanır.
-                        </p>
-                    </div>
-
-                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);">
-                        <h3 style="color: var(--secondary); margin-bottom: 0.8rem;">👷 Personel Verimliliği</h3>
-                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
-                            Sahadaki ekiplerin çalışma saatleri, veriye dayalı planlama ile optimize edilir. Şehir genelindeki <strong>Gateway</strong> istasyonları bu verinin kesintisiz akışını sağlar.
-                        </p>
-                    </div>
-
-                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent);">
-                        <h3 style="color: var(--accent); margin-bottom: 0.8rem;">♻️ Çevresel Etki (Sıfır Atık)</h3>
-                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
-                            Taşan konteynırların hızla fark edilmesiyle çevre kirliliği minimize edilir. <strong>PDR</strong> oranının yüksek tutulması, bu çevresel kontrolün sürekliliği için hayati önemdedir.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="report-content" style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem;">
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem;">
-                    <div>
-                        <h2>Teknik Analiz & Görüşler</h2>
-                        <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan Gateway'ler sayesinde PDR oranı optimize edilmiştir.</p>
-                    </div>
-                    <div class="card" style="background: rgba(59, 130, 246, 0.05); border: 1px dashed var(--secondary);">
-                        <h4 style="color: var(--secondary); margin-bottom: 0.5rem;">💰 Tasarruf Metriği Hakkında</h4>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
-                            Yıllık tasarruf; <strong>konteynır başına ₺650</strong> (akaryakıt + personel) taban maliyetin, <strong>Cihaz Sayısı</strong> ve ağın <strong>Paket Başarı Oranı (PDR)</strong> ile çarpılmasıyla hesaplanır. PDR düştükçe, belirsizlik nedeniyle manuel kontrol ihtiyacı artar ve tasarruf azalır.
-                        </p>
-                    </div>
                 </div>
             </section>
         </main>

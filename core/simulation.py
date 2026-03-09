@@ -1,7 +1,7 @@
 from .utils import (
     calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, 
     calculate_path_loss, get_required_snr, get_sf_sensitivity,
-    calculate_duty_cycle_off_time, get_mtu_limit
+    calculate_duty_cycle_off_time, get_mtu_limit, calculate_link_margin
 )
 import numpy as np
 
@@ -123,6 +123,9 @@ class SmartCitySimulation:
             # FAZ 15: Duty Cycle ve MTU
             off_time = calculate_duty_cycle_off_time(toa)
             mtu = get_mtu_limit(sf)
+            
+            # FAZ 16: Link Margin
+            margin = calculate_link_margin(snr, sf)
 
             results.append({
                 'id': i,
@@ -131,6 +134,7 @@ class SmartCitySimulation:
                 'sf': sf,
                 'rssi': rssi,
                 'snr': snr,
+                'link_margin': margin,
                 'gateway_id': self.best_gateways[i],
                 'toa': toa,
                 'off_time': off_time,

@@ -159,3 +159,11 @@ def get_mtu_limit(sf):
         12: 51
     }
     return mtu_table.get(sf, 51)
+
+def calculate_link_margin(current_snr, sf):
+    """
+    Link Margin = Current SNR - Required SNR
+    Bağlantının ne kadar 'güvende' olduğunu ölçer (dB).
+    """
+    req_snr = get_required_snr(sf)
+    return current_snr - req_snr
