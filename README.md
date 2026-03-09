@@ -1,62 +1,61 @@
-# LoRaWAN Spreading Factor (SF) Analizi: Akıllı Şehir Simülasyonu
+# 📡 LoRaWAN Spreading Factor & Network Capacity Simulator
 
-Bu proje, LoRaWAN ağlarında **Spreading Factor (SF)** parametresinin ağ performansı, enerji tüketimi ve ağ kapasitesi üzerindeki etkilerini Python tabanlı bir simülasyon ile analiz eder.
+Bu proje, Akıllı Şehir senaryolarında (örneğin 1000+ akıllı çöp kutusu) LoRaWAN ağ performansını analiz etmek için geliştirilmiş profesyonel bir **Discrete Event Simulation** framework'üdür.
 
-Simülasyon, bir şehir merkezine dağılmış **akıllı çöp kutusu sensörleri** senaryosu üzerine kuruludur.
+## 🌟 Öne Çıkan Özellikler
 
-## 🚀 Proje Ne Yapıyor?
+- **Gelişmiş Radyo Modeli:** Log-Distance Path Loss ve rastgele **Shadowing (6dB)** etkileri ile gerçekçi şehir ortamı.
+- **Dinamik ADR (Adaptive Data Rate):** Cihazların sinyal kalitesine (SNR) göre en uygun SF7-SF12 değerini otomatik seçmesi.
+- **Çoklu Gateway (Macro-Diversity):** Şehre dağıtılmış 4 kule üzerinden kapsama alanı analizi.
+- **Frekans Atlamalı İletişim:** 8 farklı frekans kanalında trafik simülasyonu.
+- **Downlink & Half-Duplex Analizi:** Gateway'lerin onay (ACK) gönderirken yaşadığı "körlük" (blindness) etkisinin modellenmesi.
+- **İnteraktif Dashboard:** Tüm sonuçların statik görseller yerine modern bir HTML arayüzünde sunulması.
 
-Proje, her bir sensörün gateway'e olan mesafesine göre dinamik bir SF ataması yapar ve şu analizleri gerçekleştirir:
+## 📂 Proje Yapısı
 
-1.  **Fiziksel Katman Analizi:** ToA (Time on Air) ve Bit Rate hesaplamaları.
-2.  **Konum Analizi:** Cihazların koordinat bazlı SF dağılım haritası.
-3.  **Enerji Analizi:** SF değerinin pil ömrü üzerindeki etkisi.
-4.  **Ağ Kapasite Analizi:** Farklı trafik yoğunluklarında paket çakışma (collision) olasılığı.
+- `main.py`: Simülasyonu başlatan ana kontrol merkezi.
+- `simulation.py`: Şehir mimarisi, cihaz yerleşimi ve ADR mantığı.
+- `traffic_sim.py`: Zaman tabanlı paket trafiği ve çakışma (collision/blindness) motoru.
+- `utils.py`: Matematiksel modeller (ToA, Path Loss, SIR, Energy).
+- `visualizer.py`: Profesyonel grafik ve harita üretimi.
+- `html/`: Modern, karanlık mod destekli interaktif analiz dashboard'u.
+- `images/`: Üretilen tüm analiz sonuçlarının toplandığı görsel depo.
 
-## 📁 Klasör Yapısı
+## 🚀 Hızlı Başlangıç
 
-- `utils.py`: Matematiksel modeller ve LoRaWAN fiziksel katman formülleri.
-- `simulation.py`: Sensör dağılımı, SF ataması ve senaryo yönetimi.
-- `visualizer.py`: Elde edilen verilerin grafiklere dönüştürülmesi.
-- `images/`: Üretilen tüm analiz grafiklerinin bulunduğu klasör.
+### 1. Simülasyonu Çalıştırın
 
-## 📊 Analiz Sonuçları
-
-### 1. Şehir Dağılım Map'i
-
-Cihazların gateway etrafındaki halkalar (SF7-SF12) içindeki dağılımı:
-![Şehir Haritası](images/city_map_sf_distribution.png)
-
-### 2. Enerji ve Pil Ömrü
-
-Uzak mesafedeki (SF12) cihazların enerji tüketimindeki dramatik artış ve pil ömrünün kısalması:
-![Enerji Analizi](images/energy_analysis.png)
-
-### 3. Paket Çakışma Olasılığı
-
-Cihaz sayısı arttıkça ve iletim aralığı kısaldıkça ağ çakışma riskinin değişimi:
-![Çakışma Analizi](images/collision_analysis.png)
-
-## 🛠 Kurulum ve Çalıştırma
-
-Simülasyonu kendi makinenizde çalıştırmak için:
-
-1. Bağımlılıkları kurun:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install numpy matplotlib
-```
-
-2. Simülasyonu başlatın:
+Bu komut 1000 cihazlık profesyonel senaryoyu koşturur ve tüm grafikleri üretir:
 
 ```bash
 python3 main.py
 ```
 
-Grafikler otomatik olarak `images/` klasörüne kaydedilecektir.
+### 2. Dashboard'u Başlatın
+
+Arayüzü görüntülemek için yerel sunucuyu açın:
+
+```bash
+python3 -m http.server 8000
+```
+
+Ardından tarayıcınızdan şu adrese gidin:
+🔗 **[http://localhost:8000/html/index.html](http://localhost:8000/html/index.html)**
+
+## 📊 Analiz Ekran Görüntüleri
+
+### Çoklu Gateway ve SF Dağılımı
+
+![City Map](images/city_map_sf_distribution.png)
+
+### Ağ Ölçeklenebilirliği ve Kayıp Analizi
+
+![PDR Analysis](images/network_pdr_analysis.png)
+
+## � Teknik Rapor
+
+Simülasyonun bilimsel detayları, kullanılan formüller ve 2000 cihaza kadar yapılan stres testi sonuçları için `project_report.md` dosyasını inceleyebilirsiniz.
 
 ---
 
-_Bu proje, LoRaWAN teknolojisini anlamak ve ağ planlama stratejileri geliştirmek için bir eğitim/simülasyon aracıdır._
+_Bu proje LoRaWAN ağlarının planlanması ve optimizasyonu için bilimsel bir temel sunar._

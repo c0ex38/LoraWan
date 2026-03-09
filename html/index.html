@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRaWAN Network Analytics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside>
+            <div class="logo">LoRaSim PRO</div>
+            <nav>
+                <ul>
+                    <li class="active"><span>📊</span> Dashboard</li>
+                    <li><span>🗺️</span> Network Map</li>
+                    <li><span>📉</span> Scalability</li>
+                    <li><span>🔋</span> Energy Analysis</li>
+                    <li><span>📜</span> Technical Report</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main>
+            <header>
+                <h1>Network Analytics</h1>
+                <p class="subtitle">Smart City Trash Bin Simulation - Phase 6 Results</p>
+            </header>
+
+            <!-- KPI Cards -->
+            <section class="stats-grid">
+                <div class="card">
+                    <span class="stat-label">Total Devices</span>
+                    <span class="stat-value">1,000</span>
+                </div>
+                <div class="card">
+                    <span class="stat-label">Gateways</span>
+                    <span class="stat-value" style="color: var(--secondary);">4</span>
+                </div>
+                <div class="card">
+                    <span class="stat-label">Avg Success Rate (PDR)</span>
+                    <span class="stat-value" style="color: var(--accent);">98.9%</span>
+                </div>
+                <div class="card">
+                    <span class="stat-label">Packet Loss (Blindness)</span>
+                    <span class="stat-value" style="color: #ef4444;">11.2%</span>
+                </div>
+            </section>
+
+            <!-- Main Visuals -->
+            <section class="visual-section">
+                <div class="map-container">
+                    <h3>Multi-Gateway Spatial Distribution</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">Real-time ADR mapping with Shadowing effects</p>
+                    <!-- Görseller images klasöründen referans alınacak -->
+                    <img src="../images/city_map_sf_distribution.png" alt="Ağ Haritası">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Scalability & Blindness</h3>
+                    <img src="../images/network_pdr_analysis.png" alt="PDR Analizi">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Energy & Battery Life</h3>
+                    <img src="../images/energy_analysis.png" alt="Enerji Analizi">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Signal Quality (Shadowing)</h3>
+                    <img src="../images/signal_quality.png" alt="Sinyal Kalitesi">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Theoretical Limits</h3>
+                    <img src="../images/theoretical_limits.png" alt="Teorik Limitler">
+                </div>
+            </section>
+
+            <!-- Report Section View -->
+            <section class="report-content">
+                <h2>Technical Insights</h2>
+                <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan 4 Gateway sayesinde PDR oranı %98 seviyesinde tutulabilmiştir.</p>
+                <button class="card" style="margin-top: 1rem; cursor: pointer; color: var(--primary);">View Full Technical Report</button>
+            </section>
+
+            <footer>
+                <p>&copy; 2026 LoRaWAN SF Analysis Simulation Framework. Designed for Advanced Network Planning.</p>
+            </footer>
+        </main>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>
