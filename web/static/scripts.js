@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     num_bins: num_bins,
                     num_gateways: num_gateways,
                     area_size: area_size,
-                    full_suite: isFull
+                    full_suite: isFull,
+                    scenario: document.getElementById('scenario_select').value
                 })
             });
 
@@ -100,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('stat_bins').innerText = data.stats.num_bins.toLocaleString();
             
             // Belediye Tasarruf Tahmini (Simülatif mantık: Cihaz başına PDR verimliliği ile)
-            const baseSavingPerBin = 420; // TL
+            const baseSavingPerBin = 650; // TL (Güncel akaryakıt ve personel maliyet projeksiyonu)
             const totalSaving = Math.round(data.stats.num_bins * (data.stats.pdr / 100) * baseSavingPerBin);
             document.getElementById('stat_savings').innerText = `₺${(totalSaving/1000).toFixed(1)}K`;
             
@@ -109,9 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const t = new Date().getTime();
             document.getElementById('img_map').src = `/images/city_map_sf_distribution.png?t=${t}`;
+            document.getElementById('img_heatmap').src = `/images/coverage_heatmap.png?t=${t}`;
+            document.getElementById('img_neighborhood').src = `/images/neighborhood_analysis.png?t=${t}`;
             document.getElementById('img_pdr').src = `/images/network_pdr_analysis.png?t=${t}`;
             document.getElementById('img_energy').src = `/images/energy_analysis.png?t=${t}`;
             document.getElementById('img_signal').src = `/images/signal_quality.png?t=${t}`;
+            if (document.getElementById('img_device_type')) {
+                document.getElementById('img_device_type').src = `/images/device_type_analysis.png?t=${t}`;
+            }
             
             if (document.getElementById('img_theoretical')) {
                 document.getElementById('img_theoretical').src = `/images/theoretical_limits.png?t=${t}`;
@@ -119,6 +125,35 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Simülasyon başarıyla tamamlandı!');
             loadHistory(); // Listeyi güncelle
         }
+    }
+
+    async function detailView(simId) {
+        const res = await fetch(`/api/history/${simId}`);
+        const data = await res.json();
+        const t = new Date().getTime();
+        
+        // Dashboard'u eski verilerle doldur
+        document.getElementById('stat_bins').innerText = data.stats.num_bins;
+        document.getElementById('stat_pdr').innerText = data.stats.pdr + '%';
+        
+        document.getElementById('img_map').src = `/history-images/${simId}/city_map_sf_distribution.png`;
+        document.getElementById('img_heatmap').src = `/history-images/${simId}/coverage_heatmap.png`;
+        document.getElementById('img_neighborhood').src = `/history-images/${simId}/neighborhood_analysis.png`;
+        document.getElementById('img_pdr').src = `/history-images/${simId}/network_pdr_analysis.png`;
+        if (document.getElementById('img_device_type')) {
+            document.getElementById('img_device_type').src = `/history-images/${simId}/device_type_analysis.png`;
+        }
+        
+        alert(`${simId} detayları yüklendi.`);
+    }
+
+    // --- RAPOR EXPORT ---
+    const exportBtn = document.getElementById('export_report_btn');
+    if (exportBtn) {
+        exportBtn.onclick = () => {
+            // Navbar ve Sidebar'ı gizle, sadece ana içeriği yazdır
+            window.print();
+        };
     }
 
     runBtn.addEventListener('click', async () => {
@@ -166,26 +201,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/history/${simId}`);
             const data = await response.json();
             
-            // Verileri Güncelle
-            document.getElementById('stat_bins').innerText = data.stats.num_bins.toLocaleString();
-            document.getElementById('stat_gateways').innerText = data.stats.num_gateways;
-            document.getElementById('stat_pdr').innerText = data.stats.pdr + '%';
-            document.getElementById('stat_blindness').innerText = data.stats.blindness;
+            // Verileri Güncelle (Güvenli Kontrol)
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
 
-            // Grafikleri Geçmişten Yükle
+            setVal('stat_bins', data.stats.num_bins.toLocaleString());
+            setVal('stat_pdr', data.stats.pdr + '%');
+            setVal('stat_blindness', data.stats.blindness);
+
+            // Tasarruf Yeniden Hesapla (Arşiv için)
+            if (document.getElementById('stat_savings')) {
+                const baseSavingPerBin = 650;
+                const totalSaving = Math.round(data.stats.num_bins * (data.stats.pdr / 100) * baseSavingPerBin);
+                document.getElementById('stat_savings').innerText = `₺${(totalSaving/1000).toFixed(1)}K`;
+            }
+            
+            // Grafikleri Geçmişten Yükle (Güvenli Kontrol)
             const t = new Date().getTime();
-            document.getElementById('img_map').src = `/history-images/${simId}/city_map_sf_distribution.png?t=${t}`;
-            document.getElementById('img_pdr').src = `/history-images/${simId}/network_pdr_analysis.png?t=${t}`;
-            document.getElementById('img_energy').src = `/history-images/${simId}/energy_analysis.png?t=${t}`;
-            document.getElementById('img_signal').src = `/history-images/${simId}/signal_quality.png?t=${t}`;
+            const setImg = (id, filename) => {
+                const el = document.getElementById(id);
+                if (el) el.src = `/history-images/${simId}/${filename}?t=${t}`;
+            };
+
+            setImg('img_map', 'city_map_sf_distribution.png');
+            setImg('img_heatmap', 'coverage_heatmap.png');
+            setImg('img_neighborhood', 'neighborhood_analysis.png');
+            setImg('img_pdr', 'network_pdr_analysis.png');
+            setImg('img_energy', 'energy_analysis.png');
+            setImg('img_signal', 'signal_quality.png');
             
             // Konsolu Temizle ve Bilgi Ver
             const logWindow = document.getElementById('sim_logs');
-            logWindow.innerHTML = `> [ARŞİV] ${simId} tarihli simülasyon verileri yüklendi.`;
+            if (logWindow) {
+                logWindow.innerHTML = `<div style="color: #60a5fa;">> [ARŞİV] ${simId} tarihli belediye raporu yüklendi.</div>`;
+            }
             
-            alert(`${simId} tarihli arşiv yüklendi.`);
+            alert(`${simId} tarihli belediye arşivi başarıyla yüklendi.`);
         } catch (err) {
-            alert('Arşiv yüklenirken bir hata oluştu.');
+            console.error('Render history error:', err);
+            alert('Arşiv yüklenirken bir hata oluştu. Veri yapısı uyumsuz olabilir.');
         }
     }
 

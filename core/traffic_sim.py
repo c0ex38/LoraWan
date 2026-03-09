@@ -8,24 +8,45 @@ class TrafficSimulator:
         self.num_channels = num_channels
         self.packets = []
         
-    def generate_traffic(self, interval_seconds=600):
+    def generate_traffic(self, interval_seconds=600, scenario='NORMAL'):
         self.packets = []
+        
+        # SENARYO: Festival (FESTIVAL) - Yoğun trafik
+        is_festival = scenario == 'FESTIVAL'
+
         for dev in self.devices:
-            current_time = np.random.uniform(0, interval_seconds)
+            d_type = dev.get('type', 'BIN')
+            
+            # Cihaz Tipine Göre Interval (Saniye)
+            if d_type == 'LIGHT':
+                d_interval = 600 # 10 dk
+            elif d_type == 'AIR':
+                d_interval = 1800 # 30 dk
+            elif d_type == 'WATER':
+                d_interval = 86400 # 24 saat (Günde 1)
+            else: # BIN
+                d_interval = interval_seconds # Varsayılan (Genelde 600)
+            
+            # Festival Modu Çarpanı
+            if is_festival:
+                d_interval = max(60, d_interval / 5)
+
+            current_time = np.random.uniform(0, d_interval)
             toa_s = dev['toa'] / 1000
             
             while current_time < self.duration:
                 self.packets.append({
                     'device_id': dev['id'],
+                    'device_type': d_type,
                     'start_time': current_time,
                     'end_time': current_time + toa_s,
                     'sf': dev['sf'],
                     'rssi': dev['rssi'],
-                    'channel_id': np.random.randint(0, self.num_channels), # Rastgele kanal
+                    'channel_id': np.random.randint(0, self.num_channels),
                     'gateway_id': dev['gateway_id'],
                     'status': 'SUCCESS'
                 })
-                current_time += interval_seconds + np.random.uniform(-10, 10)
+                current_time += d_interval + np.random.uniform(-10, 10)
         
         self.packets.sort(key=lambda x: x['start_time'])
         return self.packets
@@ -34,21 +55,21 @@ class TrafficSimulator:
         """
         Zaman ekseninde çakışmaları ve Gateway körlüğünü (Half-Duplex) kontrol eder.
         """
+        # Sayaçlar ve Takip Yapıları
         success_count = 0
         collision_count = 0
         blindness_count = 0
+        gw_busy_slots = {i: [] for i in range(20)} # Max 20 GW desteği
         
-        # Gateway meşguliyet takibi: {gw_id: [(start, end), ...]}
-        gw_busy_slots = {i: [] for i in range(10)} # Max 10 GW varsayalım
-        
-        # Önce tüm başarılı uplink'ler için downlink pencereleri oluşturulmalı
-        # Ancak bu basitleştirme adına paket sırasıyla gidelim
+        # Cihaz bazlı başarı takibi
+        device_stats = {dev['id']: {'total': 0, 'success': 0} for dev in self.devices}
         
         for i, p1 in enumerate(self.packets):
+            dev_id = p1['device_id']
+            device_stats[dev_id]['total'] += 1
             gw_id = p1['gateway_id']
             
-            # 1. Gateway Körlüğü Kontrolü (Half-Duplex)
-            # Eğer p1 ulaştığında Gateway başka bir ACK gönderiyorsa paket kaybolur.
+            # 1. Gateway Körlüğü Kontrolü
             is_blind = False
             for busy_start, busy_end in gw_busy_slots[gw_id]:
                 if not (p1['end_time'] < busy_start or p1['start_time'] > busy_end):
@@ -60,7 +81,8 @@ class TrafficSimulator:
                 blindness_count += 1
                 continue
 
-            # 2. Uplink-Uplink Çakışma Kontrolü (SIR/Orthogonality)
+            # 2. Çakışma Kontrolü
+            collision = False
             for j, p2 in enumerate(self.packets):
                 if i == j: continue
                 overlap = not (p1['end_time'] < p2['start_time'] or p2['end_time'] < p1['start_time'])
@@ -68,24 +90,32 @@ class TrafficSimulator:
                 if overlap and same_channel:
                     p1_survives = check_collision_sir(p1['sf'], p2['sf'], p1['rssi'], p2['rssi'])
                     if not p1_survives:
-                        p1['status'] = 'COLLIDED'
-                        collision_count += 1
+                        collision = True
                         break
             
-            # 3. ACK Gönderimi ve Gateway'i Meşgul Etme
+            if collision:
+                p1['status'] = 'COLLIDED'
+                collision_count += 1
+                continue
+            
+            # 3. Başarı ve ACK
             if p1['status'] == 'SUCCESS':
                 success_count += 1
-                # LoRaWAN RX1 Penceresi: Uplink bittikten 1s sonra başlar
-                # ACK süresi (Downlink ToA) yaklaşık bir Uplink kadardır
+                device_stats[dev_id]['success'] += 1
                 ack_start = p1['end_time'] + 1.0
                 ack_end = ack_start + (calculate_time_on_air(10, p1['sf']) / 1000)
                 gw_busy_slots[gw_id].append((ack_start, ack_end))
         
+        # Cihaz listesine PDR ekle
+        for dev in self.devices:
+            d_stat = device_stats[dev['id']]
+            dev['pdr'] = (d_stat['success'] / d_stat['total'] * 100) if d_stat['total'] > 0 else 100
+
         pdr = (success_count / len(self.packets)) * 100 if self.packets else 0
         return {
             'total_packets': len(self.packets),
             'success': success_count,
             'collision': collision_count,
-            'blindness': blindness_count, # Gateway meşgulken gelenler
+            'blindness': blindness_count,
             'pdr': pdr
         }

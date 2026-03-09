@@ -2,27 +2,47 @@ from .utils import calculate_time_on_air, calculate_bit_rate, calculate_energy_c
 import numpy as np
 
 class SmartCitySimulation:
-    def __init__(self, num_bins=100, area_size=10000, num_gateways=4):
+    def __init__(self, num_bins=100, area_size=10000, num_gateways=4, scenario='NORMAL'):
         self.num_bins = num_bins
+        self.area_size = area_size
+        self.scenario = scenario
         # Çoklu Gateway Yerleşimi (Kare şeklinde dağılım)
         offset = area_size / 4
         self.gateways = np.array([
             [offset, offset], [-offset, offset], 
             [offset, -offset], [-offset, -offset]
         ])[:num_gateways]
+
+        # SENARYO: Gateway Arızası (FAILURE)
+        if scenario == 'FAILURE' and len(self.gateways) > 1:
+            self.gateways = self.gateways[1:] # İlk gateway arızalı (GW0 devre dışı)
         
         self.bin_positions = np.random.uniform(-area_size/2, area_size/2, (num_bins, 2))
         
         # Faz 4: Sinyal ve GW Seçim Parametreleri
         self.tx_power = 14 
         self.noise_floor = -110 
+        self.device_types = [] # 'BIN', 'LIGHT', 'WATER', 'AIR'
         self.bin_sfs = []
         self.bin_rssis = []
         self.bin_snrs = []
         self.best_gateways = []
-        self.distances = [] # En yakın GW mesafesi
+        self.distances = [] 
 
-        for pos in self.bin_positions:
+        types = ['BIN', 'LIGHT', 'WATER', 'AIR']
+        
+        for i, pos in enumerate(self.bin_positions):
+            # Cihaz Tipi Ata
+            d_type = types[i % 4]
+            self.device_types.append(d_type)
+            
+            # Cihaz Tipine Göre Ek Kayıplar (Penetrasyon)
+            indoor_loss = 0
+            if d_type == 'WATER': # Su sayaçları bodrumda
+                indoor_loss = 20
+            elif d_type == 'BIN':
+                indoor_loss = 5 # Metal kutu etkisi
+            
             best_snr = -999
             best_rssi = -999
             best_sf = 12
@@ -31,8 +51,14 @@ class SmartCitySimulation:
             
             for gw_idx, gw_pos in enumerate(self.gateways):
                 d = np.linalg.norm(pos - gw_pos)
-                shadowing = np.random.normal(0, 6)
-                pl = calculate_path_loss(d) + shadowing
+                shadowing_std = 6
+                if self.scenario == 'STORM':
+                    shadowing_std = 12
+                    shadowing = np.random.normal(-10, shadowing_std)
+                else:
+                    shadowing = np.random.normal(0, shadowing_std)
+                
+                pl = calculate_path_loss(d) + shadowing + indoor_loss
                 rssi = self.tx_power - pl
                 snr = rssi - self.noise_floor
                 
@@ -70,17 +96,29 @@ class SmartCitySimulation:
             sf = self.bin_sfs[i]
             rssi = self.bin_rssis[i]
             snr = self.bin_snrs[i]
+            d_type = self.device_types[i]
+            
             toa = calculate_time_on_air(payload_size, sf)
             energy = calculate_energy_consumption(toa)
             
-            # ... pil ömrü hesapları aynı ...
             total_battery_mj = battery_mah * voltage * 3600
-            transmissions_per_day = 4
+            
+            # Cihaz Tipine Göre Veri Gönderim Sıklığı
+            if d_type == 'LIGHT':
+                transmissions_per_day = 144 # 10 dakikada bir
+            elif d_type == 'AIR':
+                transmissions_per_day = 48 # 30 dakikada bir
+            elif d_type == 'WATER':
+                transmissions_per_day = 1 # Günde 1 kez
+            else: # BIN
+                transmissions_per_day = 4 # 6 saatte bir
+                
             daily_energy = energy * transmissions_per_day
             est_life_days = total_battery_mj / daily_energy if daily_energy > 0 else 0
             
             results.append({
                 'id': i,
+                'type': d_type,
                 'distance': self.distances[i],
                 'sf': sf,
                 'rssi': rssi,
@@ -92,7 +130,7 @@ class SmartCitySimulation:
                 'battery_life': est_life_days / 365
             })
             
-            print(f"{i:<10} | {sf:<5} | {rssi:<12.1f} | {snr:<10.1f} | {energy:<15.2f}")
+            print(f"{d_type:<10} | {sf:<5} | {rssi:<12.1f} | {snr:<10.1f} | {energy:<15.2f}")
             
         return results
 

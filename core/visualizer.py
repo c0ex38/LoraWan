@@ -59,26 +59,55 @@ def plot_spatial_distribution(sim):
     """
     plt.figure(figsize=(12, 12))
     
-    # Gateways
-    for i, gw_pos in enumerate(sim.gateways):
-        plt.scatter(gw_pos[0], gw_pos[1], c='red', marker='H', s=300, 
-                    label=f'Gateway {i}' if i == 0 else "", zorder=5)
-        plt.text(gw_pos[0], gw_pos[1]+200, f'GW{i}', fontsize=12, fontweight='bold', ha='center')
+    # Cihazlar (Tipe Göre Sembol)
+    markers = {'BIN': 'o', 'LIGHT': '^', 'WATER': 's', 'AIR': 'D'}
+    for d_type in markers:
+        idx = [i for i, t in enumerate(sim.device_types) if t == d_type]
+        if idx:
+            plt.scatter(sim.bin_positions[idx, 0], sim.bin_positions[idx, 1], 
+                        marker=markers[d_type], label=f'Cihaz: {d_type}', 
+                        c=[sim.bin_sfs[i] for i in idx], cmap='viridis', 
+                        s=100, edgecolors='white', vmin=7, vmax=12)
     
-    # Çöp Kutuları
-    scatter = plt.scatter(sim.bin_positions[:, 0], sim.bin_positions[:, 1], 
-                         c=sim.bin_sfs, cmap='viridis', s=80, edgecolors='black', 
-                         alpha=0.8, label='Smart Bins')
-    
-    plt.colorbar(scatter, label='Spreading Factor (SF)')
-    plt.title(f'Profesyonel Ağ Haritası: {len(sim.gateways)} Gateway & {sim.num_bins} Cihaz')
+    plt.colorbar(label='Spreading Factor (SF)')
+    plt.title(f'Hibrit Şehir Ağ Haritası: {len(sim.gateways)} Gateway & {sim.num_bins} Karışık Cihaz')
     plt.xlabel('Mesafe (X - metre)')
     plt.ylabel('Mesafe (Y - metre)')
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.legend()
     plt.axis('equal')
     plt.savefig('assets/plots/city_map_sf_distribution.png')
-    print("Multi-Gateway map saved as assets/plots/city_map_sf_distribution.png")
+    print("Hybrid Map saved as assets/plots/city_map_sf_distribution.png")
+
+def plot_device_type_stats(results):
+    """
+    Cihaz tiplerine göre PDR ve Pil Ömrü kıyaslaması.
+    """
+    types = sorted(list(set([r['type'] for r in results])))
+    pdr_means = []
+    life_means = []
+    
+    for t in types:
+        type_res = [r for r in results if r['type'] == t]
+        pdr_means.append(np.mean([r['pdr'] for r in type_res]) if type_res else 0)
+        life_means.append(np.mean([r['battery_life'] for r in type_res]) if type_res else 0)
+        
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    
+    # PDR Bar
+    ax1.bar(types, pdr_means, color='#3b82f6', alpha=0.6, label='Ortalama PDR (%)')
+    ax1.set_ylabel('Başarı Oranı (PDR %)', color='#1d4ed8')
+    ax1.set_ylim(0, 105)
+    
+    # Pil Ömrü Line
+    ax2 = ax1.twinx()
+    ax2.plot(types, life_means, color='#ef4444', marker='o', linewidth=3, label='Ortalama Pil (Yıl)')
+    ax2.set_ylabel('Tahmini Pil Ömrü (Yıl)', color='#b91c1c')
+    
+    plt.title('Hibrit Hizmet Analizi: Cihaz Tipi Bazlı Performans & Ömür')
+    fig.tight_layout()
+    plt.savefig('assets/plots/device_type_analysis.png')
+    print("Device type analysis saved as assets/plots/device_type_analysis.png")
 
 def plot_energy_analysis(results):
     """
@@ -234,6 +263,65 @@ def plot_pdr_analysis(sim_class, area_size=5000):
     plt.tight_layout()
     plt.savefig('assets/plots/network_pdr_analysis.png')
     print("Detailed PDR analysis plot saved as assets/plots/network_pdr_analysis.png")
+
+def plot_coverage_heatmap(sim, results):
+    """
+    Şehir genelindeki sinyal kalitesini (RSSI) grid bazlı ısı haritası olarak görselleştirir.
+    Belediyeye 'nereye yeni gateway koymalıyız' sorusunun cevabını verir.
+    """
+    from scipy.interpolate import griddata
+    
+    x = sim.bin_positions[:, 0]
+    y = sim.bin_positions[:, 1]
+    z = [r['rssi'] for r in results]
+    
+    # Grid oluştur (Simülasyon -area/2 ile area/2 arasında çalıştığı için)
+    half_size = sim.area_size / 2
+    xi = np.linspace(-half_size, half_size, 100)
+    yi = np.linspace(-half_size, half_size, 100)
+    xi, yi = np.meshgrid(xi, yi)
+    
+    # Interpolasyon (Sinyal yayılım tahmini)
+    zi = griddata((x, y), z, (xi, yi), method='linear')
+    
+    plt.figure(figsize=(10, 8))
+    cp = plt.contourf(xi, yi, zi, cmap='RdYlGn', alpha=0.7, levels=20)
+    plt.colorbar(cp, label='Sinyal Gücü (RSSI - dBm)')
+    
+    # Isı haritası üzerine Gateway'leri koy
+    for i, gw in enumerate(sim.gateways):
+        plt.scatter(gw[0], gw[1], c='black', marker='H', s=200, label=f'GW{i}' if i==0 else "")
+        
+    plt.title('Kapsama Isı Haritası: Zayıf Sinyal (Ölü Bölge) Analizi')
+    plt.xlabel('X (m)')
+    plt.ylabel('Y (m)')
+    plt.grid(True, linestyle='--', alpha=0.3)
+    plt.savefig('assets/plots/coverage_heatmap.png')
+    print("Coverage heatmap saved as assets/plots/coverage_heatmap.png")
+
+def plot_neighborhood_stats(results):
+    """
+    Cihazları konuma göre sanal mahallelere ayırıp başarı oranlarını kıyaslar.
+    """
+    # Basit bir 4 bölge (Quadrant) analizi
+    # Gerçek projede 'results' içinde koordinat da olmalı, şimdilik mesafeye göre gruplayalım
+    near = [r['pdr'] for r in results if r['distance'] < 1500]
+    mid = [r['pdr'] for r in results if 1500 <= r['distance'] < 3000]
+    far = [r['pdr'] for r in results if r['distance'] >= 3000]
+    
+    labels = ['Merkez', 'Çevre', 'Kırsal']
+    means = [np.mean(near) if near else 0, np.mean(mid) if mid else 0, np.mean(far) if far else 0]
+    
+    plt.figure(figsize=(8, 6))
+    plt.bar(labels, means, color=['#3b82f6', '#10b981', '#f59e0b'])
+    plt.title('Bölgesel Verimlilik Kıyaslaması (Mahalle Bazlı PDR)')
+    plt.ylabel('Başarı Oranı (%)')
+    plt.ylim(0, 105)
+    for i, v in enumerate(means):
+        plt.text(i, v + 2, f"%{v:.1f}", ha='center', fontweight='bold')
+        
+    plt.savefig('assets/plots/neighborhood_analysis.png')
+    print("Neighborhood analysis saved as assets/plots/neighborhood_analysis.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation

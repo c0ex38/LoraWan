@@ -35,6 +35,15 @@
                     <input type="range" id="area_size" min="1000" max="15000" step="1000" value="5000" style="width: 100%; margin: 10px 0;">
                     <span id="area_val" style="font-size: 0.9rem; font-weight: bold;">5.0</span>
                 </div>
+                <div style="margin-top: 1rem;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Operasyonel Durum</label>
+                    <select id="scenario_select" class="card" style="width: 100%; margin-top: 5px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); padding: 8px;">
+                        <option value="NORMAL">☀️ Normal Gün</option>
+                        <option value="FAILURE">⚠ Gateway Arızası (GW0)</option>
+                        <option value="FESTIVAL">🎊 Şehir Festivali (Yoğun Trafik)</option>
+                        <option value="STORM">🌩 Şiddetli Fırtına (Sinyal Kaybı)</option>
+                    </select>
+                </div>
                 <button id="run_sim_btn" class="card" style="width: 100%; margin-top: 1rem; background: var(--primary); color: white; cursor: pointer; border: none; padding: 12px; font-weight: bold; transition: all 0.3s ease;">TEMEL SİMÜLASYONU BAŞLAT</button>
                 <button id="run_full_sim_btn" class="card" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1px solid var(--primary); color: var(--primary); cursor: pointer; padding: 12px; font-weight: bold; transition: all 0.3s ease;">🚀 TAM ANALİZİ BAŞLAT</button>
             </div>
@@ -54,6 +63,14 @@
             <header>
                 <h1>Operasyon Merkezi</h1>
                 <p class="subtitle">Sıfır Atık Vizyonu - Akıllı Atık Yönetim Sistemi</p>
+                <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                    <button id="export_report_btn" class="card" style="background: white; color: var(--primary); border: 1px solid var(--primary); padding: 8px 15px; font-size: 0.8rem; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                        📄 RAPORU DIŞA AKTAR
+                    </button>
+                    <button class="card" style="background: white; color: var(--text-muted); border: 1px solid var(--border); padding: 8px 15px; font-size: 0.8rem; cursor: not-allowed; font-weight: bold;">
+                        ⚙️ SİSTEM AYARLARI
+                    </button>
+                </div>
             </header>
 
             <!-- Simulation Console -->
@@ -79,9 +96,10 @@
                     <span class="stat-label">Aktif Konteynır</span>
                     <span id="stat_bins" class="stat-value">1,000</span>
                 </div>
-                <div class="card" style="border-left: 4px solid var(--secondary);">
+                <div class="card" style="border-left: 4px solid var(--secondary); position: relative;">
                     <span class="stat-label">Yıllık Tahmini Tasarruf</span>
                     <span id="stat_savings" class="stat-value" style="color: var(--secondary);">₺0K</span>
+                    <div class="info-icon" style="position: absolute; top: 15px; right: 15px; cursor: help; color: var(--text-muted); font-size: 0.8rem;" title="Hesaplama: (Cihaz Sayısı x PDR x ₺650) - Operasyonel verimlilik projeksiyonu.">ⓘ</div>
                 </div>
                 <div class="card" style="border-left: 4px solid var(--accent);">
                     <span class="stat-label">Saha Verimliliği (PDR)</span>
@@ -105,6 +123,18 @@
                     <h3>Konteynır Dağılım Haritası</h3>
                     <p class="subtitle" style="margin-bottom: 1rem;">Bölge bazlı doluluk iletim kapsama analizi</p>
                     <img id="img_map" src="/images/city_map_sf_distribution.png" alt="Ağ Haritası">
+                </div>
+
+                <div class="map-container" style="grid-column: span 1;">
+                    <h3>Kapsama Isı Haritası (Heatmap)</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">Sinyal ölü bölge ve yeni Gateway tavsiye tespiti</p>
+                    <img id="img_heatmap" src="/images/coverage_heatmap.png" alt="Sinyal Isı Haritası">
+                </div>
+
+                <div class="chart-card">
+                    <h3>Bölgesel Verimlilik Analizi</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">Mahalle bazlı paket başarı oranları (PDR)</p>
+                    <img id="img_neighborhood" src="/images/neighborhood_analysis.png" alt="Bölgesel Analiz">
                 </div>
 
                 <div class="chart-card">
@@ -157,10 +187,19 @@
                 </div>
             </section>
 
-            <!-- Report Section View -->
             <section class="report-content" style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem;">
-                <h2>Teknik Analiz & Görüşler</h2>
-                <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan Gateway'ler sayesinde PDR oranı optimize edilmiştir.</p>
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem;">
+                    <div>
+                        <h2>Teknik Analiz & Görüşler</h2>
+                        <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan Gateway'ler sayesinde PDR oranı optimize edilmiştir.</p>
+                    </div>
+                    <div class="card" style="background: rgba(59, 130, 246, 0.05); border: 1px dashed var(--secondary);">
+                        <h4 style="color: var(--secondary); margin-bottom: 0.5rem;">💰 Tasarruf Metriği Hakkında</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+                            Yıllık tasarruf; <strong>konteynır başına ₺650</strong> (akaryakıt + personel) taban maliyetin, <strong>Cihaz Sayısı</strong> ve ağın <strong>Paket Başarı Oranı (PDR)</strong> ile çarpılmasıyla hesaplanır. PDR düştükçe, belirsizlik nedeniyle manuel kontrol ihtiyacı artar ve tasarruf azalır.
+                        </p>
+                    </div>
+                </div>
             </section>
         </main>
     </div>

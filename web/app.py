@@ -41,9 +41,10 @@ def send_images(path):
 def run_simulation():
     data = request.json
     num_bins = int(data.get('num_bins', 100))
-    area_size = int(data.get('area_size', 5000))
+    area_size = float(data.get('area_size', 5000))
     num_gateways = int(data.get('num_gateways', 4))
     is_full_suite = data.get('full_suite', False)
+    scenario = data.get('scenario', 'NORMAL')
 
     def generate():
         logs = []
@@ -52,67 +53,66 @@ def run_simulation():
             return f"data: {msg}\n\n"
 
         try:
-            yield log_yield(f"Simülasyon başlatılıyor (Mod: {'Tam Analiz' if is_full_suite else 'Temel'})...")
+            yield log_yield(f"Simülasyon başlatılıyor (Senaryo: {scenario})...")
             
-            # 1. Simülasyon
-            yield log_yield(f"{num_bins} adet akıllı çöp kutusu {area_size}m² alana yerleştiriliyor...")
+            # 1. Simülasyon (Hibrit Mod)
+            if scenario == 'FAILURE':
+                yield log_yield("KRİZ MODU: GW0 devre dışı! Diğer Gateway'ler yükü devralıyor...")
+            elif scenario == 'STORM':
+                yield log_yield("HAVA DURUMU: Şiddetli fırtına! Sinyal kaybı ve değişkenlik artırıldı.")
+                
+            yield log_yield(f"{num_bins} adet hibrit cihaz {area_size}m² alana yerleştiriliyor...")
             time.sleep(0.5) 
-            sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size, num_gateways=num_gateways)
+            sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size, num_gateways=num_gateways, scenario=scenario)
             
-            yield log_yield(f"{num_gateways} Gateway için sinyal yayılım ve gölgeleme modelleri hesaplanıyor...")
+            yield log_yield("Cihaz Profilleri Tanımlanıyor: Aydınlatma, Su Sayaçları, Hava Sensörleri...")
             results = sim.run_analysis()
             
-            yield log_yield("ADR Optimizasyonu: Sinyal kalitesine göre SF atamaları yapılıyor...")
-            
-            # 2. Trafik
-            yield log_yield("30 dakikalık trafik örüntüsü oluşturuluyor (5 dakikalık aralıklarla)...")
+            # 2. Trafik (Farklı Interval'lar)
+            yield log_yield("Dinamik trafik senaryosu oluşturuluyor (Farklı cihaz sıklıkları)...")
             traffic = TrafficSimulator(results, duration_seconds=1800)
-            traffic.generate_traffic(interval_seconds=300)
+            traffic.generate_traffic(scenario=scenario)
             
-            yield log_yield("Paket çakışmaları ve Gateway körlüğü (Half-Duplex) analiz ediliyor...")
-            stats = traffic.run_collision_analysis()
+            yield log_yield("Paket çakışmaları ve ağ kapasite analizi yapılıyor...")
+            traffic_stats = traffic.run_collision_analysis()
             
             # 3. Grafikler
-            yield log_yield("Mekansal dağılım haritası oluşturuluyor...")
+            yield log_yield("Hibrit şehir haritası ve kapsama analizleri üretiliyor...")
             visualizer.plot_spatial_distribution(sim)
-            
-            yield log_yield("Sinyal kalitesi ve enerji tüketimi grafikleri üretiliyor...")
+            visualizer.plot_coverage_heatmap(sim, results)
+            visualizer.plot_neighborhood_stats(results)
             visualizer.plot_signal_quality(results)
             visualizer.plot_energy_analysis(results)
+            visualizer.plot_device_type_stats(results) # NEW
             
             if is_full_suite:
-                yield log_yield("Tam Analiz Modu: Stres testleri ve teorik limitler işleniyor...")
+                yield log_yield("İleri Analiz: Teorik limitler ve detaylı PDR stres testi işleniyor...")
                 visualizer.plot_theoretical_limits()
                 visualizer.plot_collision_analysis(results)
                 visualizer.plot_pdr_analysis(SmartCitySimulation, area_size=area_size) 
             
-            yield log_yield("Tüm simülasyon adımları başarıyla tamamlandı.")
+            yield log_yield("Simülasyon ve hibrit analizler başarıyla tamamlandı.")
             
-            # Final sonuçları JSON olarak gönder
             stats_data = {
                 'num_bins': num_bins,
-                'num_gateways': num_gateways,
-                'pdr': round(stats['pdr'], 2),
-                'blindness': stats['blindness'],
-                'collision': stats['collision'],
+                'num_gateways': len(sim.gateways),
+                'pdr': round(traffic_stats['pdr'], 2),
+                'blindness': traffic_stats['blindness'],
+                'collision': traffic_stats['collision'],
+                'scenario': scenario
             }
             
-            # --- ARŞİVLEME (NEW) ---
+            # --- ARŞİVLEME ---
             sim_id = datetime.now().strftime("%Y%m%d_%H%M%S")
             history_path = os.path.join(HISTORY_DIR, f"sim_{sim_id}")
             os.makedirs(os.path.join(history_path, "plots"), exist_ok=True)
             
-            # Parametreleri ve Sonuçları Kaydet
-            with open(os.path.join(history_path, "params.json"), "w") as f:
-                json.dump(data, f)
             with open(os.path.join(history_path, "results.json"), "w") as f:
                 json.dump({'stats': stats_data, 'logs': logs}, f)
             
-            # Grafikleri Kopyala
             for plot_file in os.listdir(IMAGES_DIR):
                 if plot_file.endswith(".png"):
                     shutil.copy(os.path.join(IMAGES_DIR, plot_file), os.path.join(history_path, "plots", plot_file))
-            # -----------------------
 
             final_data = {
                 'status': 'success',
@@ -120,9 +120,12 @@ def run_simulation():
                 'stats': {
                     **stats_data,
                     'img_map_path': '/images/city_map_sf_distribution.png',
+                    'img_heatmap_path': '/images/coverage_heatmap.png',
+                    'img_neighborhood_path': '/images/neighborhood_analysis.png',
                     'img_pdr_path': '/images/network_pdr_analysis.png',
                     'img_energy_path': '/images/energy_analysis.png',
-                    'img_signal_path': '/images/signal_quality.png'
+                    'img_signal_path': '/images/signal_quality.png',
+                    'img_device_type_path': '/images/device_type_analysis.png'
                 }
             }
             yield f"data: RESULT:{json.dumps(final_data)}\n\n"
