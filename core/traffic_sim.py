@@ -1,18 +1,20 @@
 import numpy as np
+from . import config
 from .utils import calculate_time_on_air, check_collision_sir
 
 class TrafficSimulator:
-    def __init__(self, simulation_results, duration_seconds=3600, num_channels=8):
+    def __init__(self, simulation_results, duration_seconds=3600, num_channels=config.NUM_CHANNELS):
         self.devices = simulation_results
         self.duration = duration_seconds
         self.num_channels = num_channels
         self.packets = []
         
     def generate_traffic(self, interval_seconds=600, scenario='NORMAL'):
+        """Zaman tabanlı paket trafiği üretir."""
         self.packets = []
         
         # SENARYO: Festival (FESTIVAL) - Yoğun trafik
-        is_festival = scenario == 'FESTIVAL'
+        is_festival = (scenario == 'FESTIVAL')
 
         for dev in self.devices:
             # Faz 20: Eğer cihaz arızalıysa paket göndermez
@@ -21,15 +23,9 @@ class TrafficSimulator:
                 
             d_type = dev.get('type', 'BIN')
             
-            # Cihaz Tipine Göre Interval (Saniye)
-            if d_type == 'LIGHT':
-                d_interval = 600 # 10 dk
-            elif d_type == 'AIR':
-                d_interval = 1800 # 30 dk
-            elif d_type == 'WATER':
-                d_interval = 86400 # 24 saat (Günde 1)
-            else: # BIN
-                d_interval = interval_seconds # Varsayılan (Genelde 600)
+            # Cihaz Tipine Göre İletim Aralığı (Saniye)
+            intervals = {'LIGHT': 600, 'AIR': 1800, 'WATER': 86400, 'BIN': interval_seconds}
+            d_interval = intervals.get(d_type, interval_seconds)
             
             # Festival Modu Çarpanı
             if is_festival:
@@ -56,16 +52,13 @@ class TrafficSimulator:
         return self.packets
 
     def run_collision_analysis(self):
-        """
-        Zaman ekseninde çakışmaları ve Gateway körlüğünü (Half-Duplex) kontrol eder.
-        """
+        """Çakışma ve Gateway körlüğü analiz motoru."""
         # Sayaçlar ve Takip Yapıları
-        success_count = 0
-        collision_count = 0
-        blindness_count = 0
-        co_sf_collisions = 0
-        cross_sf_collisions = 0
-        gw_busy_slots = {i: [] for i in range(20)} # Max 20 GW desteği
+        stats = {
+            'success': 0, 'collision': 0, 'blindness': 0,
+            'co_sf_collisions': 0, 'cross_sf_collisions': 0
+        }
+        gw_busy_slots = {i: [] for i in range(config.MAX_GATEWAYS)} 
         
         # HIZLI ERİŞİM: Cihaz listesini bir map'e al (O(1) erişim için)
         device_map = {dev['id']: dev for dev in self.devices}
@@ -81,89 +74,76 @@ class TrafficSimulator:
             p1_dev = device_map[dev_id]
             all_gw_stats = p1_dev['all_gw_stats']
             
-            packet_received_by_any_gw = False
-            p1_collision_type = None
+            packet_received = False
+            collision_type = None
+            is_blind = False
             
-            for gw_id_str, stats in all_gw_stats.items():
+            for gw_id_str, g_stat in all_gw_stats.items():
                 gw_id = int(gw_id_str)
-                if stats['rssi'] < -130: continue
+                if g_stat['rssi'] < config.MIN_RSSI_THRESHOLD: continue
                 
-                is_blind = False
-                for busy_start, busy_end in gw_busy_slots[gw_id]:
-                    if not (p1['end_time'] < busy_start or p1['start_time'] > busy_end):
-                        is_blind = True
-                        break
-                
+                # Blindness Check
+                is_blind = any(not (p1['end_time'] < b_s or p1['start_time'] > b_e) for b_s, b_e in gw_busy_slots[gw_id])
                 if is_blind: continue
 
+                # Collision Check
                 collision = False
-                # Sadece Zaman Olarak Çakışma İhtimali Olanları Kontrol Et
-                # İleriye doğru
+                # Forward search
                 for j in range(i + 1, len(self.packets)):
                     p2 = self.packets[j]
                     if p2['start_time'] >= p1['end_time']: break
                     if p1['channel_id'] == p2['channel_id']:
                         p2_dev = device_map.get(p2['device_id'])
-                        if p2_dev and p2_dev['all_gw_stats'].get(str(gw_id)):
-                            p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi'])
-                            if not p1_survives:
+                        if p2_dev and str(gw_id) in p2_dev['all_gw_stats']:
+                            if not check_collision_sir(p1['sf'], p2['sf'], g_stat['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi']):
                                 collision = True
-                                p1_collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
+                                collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
                                 break
                 
                 if collision: continue
                 
-                # Geriye doğru
+                # Backward search
                 for j in range(i - 1, -1, -1):
                     p2 = self.packets[j]
                     if p2['end_time'] <= p1['start_time']: break
                     if p1['channel_id'] == p2['channel_id']:
                         p2_dev = device_map.get(p2['device_id'])
-                        if p2_dev and p2_dev['all_gw_stats'].get(str(gw_id)):
-                            p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi'])
-                            if not p1_survives:
+                        if p2_dev and str(gw_id) in p2_dev['all_gw_stats']:
+                            if not check_collision_sir(p1['sf'], p2['sf'], g_stat['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi']):
                                 collision = True
-                                p1_collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
+                                collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
                                 break
                 
                 if not collision:
                     # Bu gateway paketi başarıyla aldı! (Belki capture effect sayesinde, belki de temiz kanal)
-                    packet_received_by_any_gw = True
+                    packet_received = True
                     # Başarılı alım sonrası ACK penceresi için GW'yı meşgul et
-                    ack_start = p1['end_time'] + 1.0
-                    ack_end = ack_start + (calculate_time_on_air(10, p1['sf']) / 1000)
-                    gw_busy_slots[gw_id].append((ack_start, ack_end))
+                    ack_toa = calculate_time_on_air(config.ACK_PAYLOAD_BYTES, p1['sf']) / 1000
+                    gw_busy_slots[gw_id].append((p1['end_time'] + 1.0, p1['end_time'] + 1.0 + ack_toa))
                     break
             
-            if packet_received_by_any_gw:
+            if packet_received:
                 p1['status'] = 'SUCCESS'
-                success_count += 1
+                stats['success'] += 1
                 device_stats[dev_id]['success'] += 1
             else:
                 p1['status'] = 'FAILED'
                 if is_blind: 
-                    blindness_count += 1
-                elif p1_collision_type == 'CO_SF':
-                    co_sf_collisions += 1
-                    collision_count += 1
-                elif p1_collision_type == 'CROSS_SF':
-                    cross_sf_collisions += 1
-                    collision_count += 1
+                    stats['blindness'] += 1
+                elif collision_type == 'CO_SF':
+                    stats['co_sf_collisions'] += 1
+                    stats['collision'] += 1
+                elif collision_type == 'CROSS_SF':
+                    stats['cross_sf_collisions'] += 1
+                    stats['collision'] += 1
                 else:
-                    collision_count += 1 # Genel çakışma
+                    stats['collision'] += 1 # Genel çakışma
 
         # Cihaz listesine PDR ekle
         for dev in self.devices:
-            d_stat = device_stats[dev['id']]
-            dev['pdr'] = (d_stat['success'] / d_stat['total'] * 100) if d_stat['total'] > 0 else 100
+            ds = device_stats[dev['id']]
+            dev['pdr'] = (ds['success'] / ds['total'] * 100) if ds['total'] > 0 else 100
 
-        pdr = (success_count / len(self.packets)) * 100 if self.packets else 0
-        return {
-            'total_packets': len(self.packets),
-            'success': success_count,
-            'collision': collision_count,
-            'co_sf_collisions': co_sf_collisions,
-            'cross_sf_collisions': cross_sf_collisions,
-            'blindness': blindness_count,
-            'pdr': pdr
-        }
+        stats['total_packets'] = len(self.packets)
+        stats['pdr'] = (stats['success'] / len(self.packets) * 100) if self.packets else 0
+        return stats

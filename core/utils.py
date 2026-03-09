@@ -1,187 +1,77 @@
 import math
+from . import config
 
-def calculate_time_on_air(payload_size, sf, bw=125, cr=1, preamble_len=8, header_disabled=False, low_dr_optimize=None):
+def calculate_time_on_air(payload_size, sf, bw=config.DEFAULT_BW, cr=config.DEFAULT_CR, preamble_len=config.PREAMBLE_LEN, header_disabled=False, low_dr_optimize=None):
     """
     LoRaWAN paketinin havada kalma süresini (ToA) hesaplar.
-    
-    Args:
-        payload_size (int): Byte cinsinden veri yükü
-        sf (int): Spreading Factor (7-12)
-        bw (float): Bandwidth (kHz cinsinden, varsayılan 125)
-        cr (int): Coding Rate (1: 4/5, 2: 4/6, 3: 4/7, 4: 4/8)
-        preamble_len (int): Preamble sembol sayısı (varsayılan 8)
-    
-    Returns:
-        float: Milisaniye cinsinden toplam süre
     """
-    
-    # BW'yi Hz'e çevir
     bw_hz = bw * 1000
-    
-    # Sembol süresi (T_s)
-    # T_s = (2^SF) / BW
     t_sym = (2**sf) / bw_hz
-    
-    # Preamble süresi
     t_preamble = (preamble_len + 4.25) * t_sym
     
-    # Payload sembol sayısı (n_payload)
-    # Formül: 8 + max(ceil((8PL - 4SF + 28 + 16CRC - 20H) / (4(SF - 2DE))) * (CR + 4), 0)
-    
-    # Low Data Rate Optimization (DE)
-    # SF11 ve SF12'de BW 125kHz ise genellikle zorunludur.
     if low_dr_optimize is None:
         de = 1 if (sf >= 11 and bw <= 125) else 0
     else:
         de = 1 if low_dr_optimize else 0
         
     h = 1 if header_disabled else 0
-    crc = 1 # LoRaWAN uplink paketlerinde CRC aktiftir
+    crc = 1 
     
     term1 = 8 * payload_size - 4 * sf + 28 + 16 * crc - 20 * h
     term2 = 4 * (sf - 2 * de)
     
     n_payload_val = 8 + max(math.ceil(term1 / term2) * (cr + 4), 0)
-    
     t_payload = n_payload_val * t_sym
     
-    # Toplam süre (ms)
     return (t_preamble + t_payload) * 1000
 
-def calculate_energy_consumption(toa_ms, tx_current_ma=120, voltage=3.3):
-    """
-    Bir paket iletimi için harcanan enerjiyi (miliJoule) hesaplar.
-    E = V * I * t
-    """
+def calculate_energy_consumption(toa_ms, tx_current_ma=config.TX_CURRENT_MA, voltage=config.OPERATING_VOLTAGE):
+    """Harcanan enerjiyi (miliJoule) hesaplar."""
     time_s = toa_ms / 1000
-    energy_mj = voltage * tx_current_ma * time_s
-    return energy_mj
+    return voltage * tx_current_ma * time_s
 
-def calculate_bit_rate(sf, bw=125, cr=1):
-    """
-    LoRa fiziksel katman bit hızını hesaplar (bps).
-    R_b = SF * (BW / 2^SF) * (4 / (4 + CR))
-    """
+def calculate_bit_rate(sf, bw=config.DEFAULT_BW, cr=config.DEFAULT_CR):
+    """LoRa fiziksel katman bit hızını hesaplar (bps)."""
     bw_hz = bw * 1000
-    r_b = sf * (bw_hz / (2**sf)) * (4 / (4 + cr))
-    return r_b
-
-def calculate_collision_probability(num_devices, toa_ms, interval_s):
-    """
-    Basit bir ALOHA tabanlı çakışma olasılığı hesabı.
-    P_collision = 1 - e^(-2 * G)
-    G = (Cihaz Sayısı * ToA) / İletim Aralığı
-    """
-    toa_s = toa_ms / 1000
-    g = (num_devices * toa_s) / interval_s
-    prob = 1 - math.exp(-2 * g)
-    return prob
+    return sf * (bw_hz / (2**sf)) * (4 / (4 + cr))
 
 def check_collision_sir(p1_sf, p2_sf, p1_rssi, p2_rssi):
-    """
-    LoRa PHY SIR (Signal-to-Interference Ratio) ve Capture Effect Analizi.
-    Inter-SF Rejection Matrix (Semtech/ITU standartları baz alınmıştır).
-    """
+    """SIR ve Capture Effect Analizi."""
     sir = p1_rssi - p2_rssi
     
-    # 1. AYNI SF DURUMU (CO-CHANNEL INTERFERENCE / CAPTURE EFFECT)
     if p1_sf == p2_sf:
-        # Capture Effect: Sinyal farkı 6dB'den büyükse güçlü olan paket kurtulur.
-        return sir >= 6
+        return sir >= config.CAPTURE_EFFECT_THRESHOLD
     
-    # 2. FARKLI SF DURUMU (ADJACENT-SF INTERFERENCE)
-    # Rejection Matrix: Satır p1_sf, Sütun p2_sf (Girişim yapan)
-    # Değerler: p1'in hayatta kalması için p2'den ne kadar güçlü olması gerektiği (SIR_req)
-    rejection_matrix = {
-        7:  {8: -16, 9: -18, 10: -20, 11: -22, 12: -25},
-        8:  {7: -16, 9: -16, 10: -18, 11: -20, 12: -22},
-        9:  {7: -18, 8: -16, 10: -16, 11: -18, 12: -20},
-        10: {7: -20, 8: -18, 9: -16, 11: -16, 12: -18},
-        11: {7: -22, 8: -20, 9: -18, 10: -16, 12: -16},
-        12: {7: -25, 8: -22, 9: -20, 10: -18, 11: -16}
-    }
-    
-    threshold = rejection_matrix.get(p1_sf, {}).get(p2_sf, -20)
-    
-    # SIR, threshold'dan büyükse p1 bu girişime rağmen duyulabilir.
+    threshold = config.REJECTION_MATRIX.get(p1_sf, {}).get(p2_sf, -20)
     return sir >= threshold
 
-def calculate_path_loss(distance_m, f_mhz=868, n=3.0, d0=1.0, pl0=14.7):
-    """
-    Log-Distance Path Loss Modeli.
-    PL = PL0 + 10 * n * log10(d/d0) + Shadowing
-    """
-    # Mesafe 0 olamaz
+def calculate_path_loss(distance_m, f_mhz=868, n=config.PATH_LOSS_EXPONENT, d0=1.0, pl0=14.7):
+    """Log-Distance Path Loss Modeli."""
     dist = max(distance_m, d0)
-    path_loss = pl0 + 10 * n * math.log10(dist / d0)
-    return path_loss
+    return pl0 + 10 * n * math.log10(dist / d0)
 
-def get_sf_sensitivity(sf, bw=125):
-    """
-    SF bazlı tipik LoRa duyarlılık değerleri (dBm).
-    (SX1276 datasheet bazlı yaklaşık değerler)
-    """
-    sensitivities = {
-        7: -123,
-        8: -126,
-        9: -129,
-        10: -132,
-        11: -134.5,
-        12: -137
-    }
-    return sensitivities.get(sf, -120)
+def get_sf_sensitivity(sf, bw=config.DEFAULT_BW):
+    """SF bazlı tipik LoRa duyarlılık değerleri (dBm)."""
+    return config.SF_SENSITIVITY.get(sf, -120)
 
 def get_required_snr(sf):
-    """
-    Kayıpsız iletişim için gereken minimum SNR (dB).
-    """
-    snr_table = {
-        7: -7.5,
-        8: -10,
-        9: -12.5,
-        10: -15,
-        11: -17.5,
-        12: -20
-    }
-    return snr_table.get(sf, -5)
+    """Kayıpsız iletişim için gereken minimum SNR (dB)."""
+    return config.REQUIRED_SNR.get(sf, -5)
 
-def calculate_duty_cycle_off_time(toa_ms, duty_cycle_limit=0.01):
-    """
-    Yasal %1 Duty Cycle sınırına göre iletim sonrası 'sessizlik' süresini hesaplar.
-    T_off = (T_on / DutyCycle) - T_on
-    """
-    t_on = toa_ms / 1000 # saniyeye çevir
-    t_off = (t_on / duty_cycle_limit) - t_on
-    return t_off # saniye
+def calculate_duty_cycle_off_time(toa_ms, duty_cycle_limit=config.DUTY_CYCLE_LIMIT):
+    """Duty Cycle kısıtına göre sessizlik süresi."""
+    t_on = toa_ms / 1000
+    return (t_on / duty_cycle_limit) - t_on
 
 def get_mtu_limit(sf):
-    """
-    EU868 standartlarına göre SF bazlı Maksimum Payload (MTU) boyutu.
-    SF arttıkça MTU azalır (Veri hızı düştüğü için).
-    """
-    mtu_table = {
-        7: 222,
-        8: 222,
-        9: 115,
-        10: 51,
-        11: 51,
-        12: 51
-    }
-    return mtu_table.get(sf, 51)
+    """EU868 standartlarına göre SF bazlı Maksimum Payload (MTU)."""
+    return config.MTU_LIMITS.get(sf, 51)
 
 def calculate_link_margin(current_snr, sf):
-    """
-    Link Margin = Current SNR - Required SNR
-    Bağlantının ne kadar 'güvende' olduğunu ölçer (dB).
-    """
-    req_snr = get_required_snr(sf)
-    return current_snr - req_snr
+    """Link Margin = Current SNR - Required SNR"""
+    return current_snr - get_required_snr(sf)
 
-def calculate_noise_floor(bw=125, noise_figure=6):
-    """
-    Termal Gürültü Tabanı (Noise Floor) Hesabı.
-    Noise Floor (dBm) = -174 + 10 * log10(BW_Hz) + Noise Figure
-    """
+def calculate_noise_floor(bw=config.DEFAULT_BW, noise_figure=6):
+    """Termal Gürültü Tabanı (Noise Floor) Hesabı."""
     bw_hz = bw * 1000
-    noise_floor = -174 + 10 * math.log10(bw_hz) + noise_figure
-    return noise_floor
+    return -174 + 10 * math.log10(bw_hz) + noise_figure

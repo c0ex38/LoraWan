@@ -11,125 +11,120 @@ class SmartCitySimulation:
         self.num_bins = num_bins
         self.area_size = area_size
         self.scenario = scenario
-        # Çoklu Gateway Yerleşimi (Kare şeklinde dağılım)
-        offset = area_size / 4
+        self.tx_power = 14 
+        self.noise_floor = calculate_noise_floor()
+        
+        # Listeler
+        self.device_types = []
+        self.bin_sfs = []
+        self.all_gw_stats = []
+        self.best_gateways = []
+        self.distances = []
+        self.device_statuses = []
+        self.failure_reasons = []
+        
+        self._initialize_gateways(num_gateways)
+        self._apply_chaos_parameters()
+        self._process_devices()
+        self._populate_legacy_stats()
+
+    def _initialize_gateways(self, num_gateways):
+        offset = self.area_size / 4
         self.gateways = np.array([
             [offset, offset], [-offset, offset], 
             [offset, -offset], [-offset, -offset]
         ])[:num_gateways]
 
-        # SENARYO: Gateway Arızası (FAILURE)
-        if scenario == 'FAILURE' and len(self.gateways) > 1:
-            self.gateways = self.gateways[1:] # İlk gateway arızalı (GW0 devre dışı)
-        
-        self.bin_positions = np.random.uniform(-area_size/2, area_size/2, (num_bins, 2))
-        
-        # Faz 4: Sinyal ve GW Seçim Parametreleri
-        self.tx_power = 14 
-        self.noise_floor = calculate_noise_floor() 
-        self.device_types = [] # 'BIN', 'LIGHT', 'WATER', 'AIR'
-        self.bin_sfs = []
-        self.all_gw_stats = [] # Her cihaz için: {gw_id: {'rssi': x, 'snr': y}, ...}
-        self.best_gateways = []
-        self.distances = [] 
-        self.device_statuses = [] # 'ACTIVE', 'FAILED'
-        self.failure_reasons = [] # 'DEAD', 'JAMMED', 'NO_LINK'
+        if self.scenario == 'FAILURE' and len(self.gateways) > 1:
+            self.gateways = self.gateways[1:]
 
-        types = ['BIN', 'LIGHT', 'WATER', 'AIR']
-        
-        # Kaos Senaryosu Parametreleri
-        self.is_chaos = scenario == 'CHAOS'
+    def _apply_chaos_parameters(self):
+        self.is_chaos = (self.scenario == 'CHAOS')
         self.jammer_pos = np.array([1000, 1000]) if self.is_chaos else None
 
+    def _calculate_device_signal(self, pos, d_type):
+        gw_stats = {}
+        best_snr = -float('inf')
+        best_gw_idx = -1
+
+        for g_idx, gw_pos in enumerate(self.gateways):
+            d = np.linalg.norm(pos - gw_pos)
+            indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
+            
+            pl = calculate_path_loss(d) + indoor_loss
+            
+            # Shadowing (Config'den çekiliyor)
+            std = config.SHADOWING_STD_STORM if self.scenario == 'STORM' else config.SHADOWING_STD_NORMAL
+            mean = -10 if self.scenario == 'STORM' else 0
+            shadowing = np.random.normal(mean, std)
+            
+            # Fading & Jamming
+            fading = np.random.uniform(-10, 5) if self.is_chaos else 0
+            jamming = 0
+            if self.is_chaos:
+                if np.linalg.norm(pos - self.jammer_pos) < config.JAMMER_RADIUS:
+                    jamming = config.JAMMER_POWER_DB
+            
+            rssi = self.tx_power - pl + shadowing + fading - jamming
+            snr = rssi - self.noise_floor
+            
+            gw_stats[g_idx] = {
+                'rssi': rssi, 'snr': snr, 'dist': d,
+                'fading': fading, 'jamming': jamming
+            }
+            
+            if snr > best_snr:
+                best_snr = snr
+                best_gw_idx = g_idx
+                
+        return gw_stats, best_snr, best_gw_idx
+
+    def _process_devices(self):
+        types = ['BIN', 'LIGHT', 'WATER', 'AIR']
+        self.bin_positions = np.random.uniform(-self.area_size/2, self.area_size/2, (self.num_bins, 2))
+
         for i in range(self.num_bins):
-            # Cihaz Tipi ve SF Seçimi
             d_type = types[i % 4]
-            self.device_types.append(d_type) # Populate device_types list
+            self.device_types.append(d_type)
             pos = self.bin_positions[i]
             
-            # Faz 20: Kaos Arızası (%5 ihtimalle cihaz bozuk)
-            is_dead = self.is_chaos and np.random.random() < 0.05
+            is_dead = self.is_chaos and np.random.random() < config.CHAOS_FAILURE_CHANCE
+            gw_stats, best_snr, best_gw_idx = self._calculate_device_signal(pos, d_type)
             
-            gw_stats = {}
-            best_gw_idx = -1
-            best_snr = -float('inf')
-            
-            for g_idx, gw_pos in enumerate(self.gateways):
-                d = np.linalg.norm(pos - gw_pos)
-                indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
-                
-                # Standart Path Loss
-                pl = calculate_path_loss(d) + indoor_loss
-                
-                # Shadowing (from original code)
-                shadowing_std = 12 if self.scenario == 'STORM' else 6
-                shadowing = np.random.normal(-10 if self.scenario == 'STORM' else 0, shadowing_std)
-                
-                # Faz 20: Derin Sönümlenme (Deep Fading) - Rastgelelik artırıldı
-                fading = np.random.uniform(-10, 5) if self.is_chaos else 0
-                
-                # Faz 20: Jamming Etkisi (Sinyal Karıştırıcı)
-                jamming = 0
-                if self.is_chaos:
-                    dist_to_jammer = np.linalg.norm(pos - self.jammer_pos)
-                    if dist_to_jammer < 500: # 500m yarıçapında etkili
-                        jamming = 30 # 30dB bastırma
-                
-                rssi = self.tx_power - pl + shadowing + fading - jamming
-                snr = rssi - self.noise_floor
-                
-                gw_stats[g_idx] = {
-                    'rssi': rssi,
-                    'snr': snr,
-                    'dist': d,
-                    'fading': fading,
-                    'jamming': jamming
-                }
-                
-                if snr > best_snr:
-                    best_snr = snr
-                    best_gw_idx = g_idx
-            
-            # ADR ve SF Seçimi
             best_sf = 7
             status = 'ACTIVE'
             failure_reason = None
 
             if is_dead:
-                status = 'FAILED'
-                failure_reason = 'DEAD'
-                best_sf = -1 # Indicate failure with SF -1
-            elif best_snr < get_required_snr(12): # If even SF12 sensitivity is not met
-                status = 'FAILED'
-                failure_reason = 'NO_LINK'
-                best_sf = -1
+                status, failure_reason, best_sf = 'FAILED', 'DEAD', -1
+            elif best_snr < get_required_snr(12):
+                status, failure_reason, best_sf = 'FAILED', 'NO_LINK', -1
             else:
                 for sf_val in range(7, 13):
                     if best_snr >= get_required_snr(sf_val) + 5:
                         best_sf = sf_val
                         break
                 else:
-                    best_sf = 12 # Default to SF12 if no better SF found but link is possible
+                    best_sf = 12
             
-            # Kayıtlar
             self.bin_sfs.append(best_sf)
             self.all_gw_stats.append(gw_stats)
             self.best_gateways.append(best_gw_idx)
-            self.distances.append(gw_stats[best_gw_idx]['dist'] if best_gw_idx != -1 else 0) # Handle no link case
+            self.distances.append(gw_stats[best_gw_idx]['dist'] if best_gw_idx != -1 else 0)
             self.device_statuses.append(status)
             self.failure_reasons.append(failure_reason)
-        
-        # Faz 18: Geriye dönük uyumluluk
-        # Ensure these lists are populated correctly even if best_gw_idx is -1 for some devices
+
+    def _populate_legacy_stats(self):
         self.bin_rssis = []
         self.bin_snrs = []
         for j in range(self.num_bins):
-            if self.best_gateways[j] != -1:
-                self.bin_rssis.append(self.all_gw_stats[j][self.best_gateways[j]]['rssi'])
-                self.bin_snrs.append(self.all_gw_stats[j][self.best_gateways[j]]['snr'])
+            bg = self.best_gateways[j]
+            if bg != -1:
+                self.bin_rssis.append(self.all_gw_stats[j][bg]['rssi'])
+                self.bin_snrs.append(self.all_gw_stats[j][bg]['snr'])
             else:
-                self.bin_rssis.append(-float('inf')) # Indicate no valid RSSI
-                self.bin_snrs.append(-float('inf')) # Indicate no valid SNR
+                self.bin_rssis.append(-float('inf'))
+                self.bin_snrs.append(-float('inf'))
             
     def run_analysis(self):
         results = []
