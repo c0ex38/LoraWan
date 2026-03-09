@@ -11,13 +11,13 @@ def main():
         os.makedirs("images")
         print("Created 'images' directory.")
 
-    # 2. Simülasyonu yapılandır ve çalıştır
-    # num_bins: Çöp kutusu sayısı, area_size: Şehir yarıçapı (metre)
-    num_bins = 50
-    area_size = 8000
+    # 2. Simülasyonu yapılandır ve çalıştır (FAZ 4: Profesyonel Seviye)
+    num_bins = 1000   # 1000 Akıllı Çöp Kutusu
+    area_size = 10000 # 10km x 10km Şehir Alanı
+    num_gateways = 4  # 4 Gateway (Kule)
     
-    print(f"Configuring simulation with {num_bins} smart bins in a {area_size}m area...")
-    sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size)
+    print(f"Configuring Pro Simulation: {num_bins} bins, {area_size}m area, {num_gateways} Gateways...")
+    sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size, num_gateways=num_gateways)
     results = sim.run_analysis()
 
     # 3. Görselleştirmeleri üret

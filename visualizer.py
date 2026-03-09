@@ -52,35 +52,31 @@ def plot_theoretical_limits():
 
 def plot_spatial_distribution(sim):
     """
-    Çöp kutularının konumlarını ve SF bölgelerini harita üzerinde gösterir.
+    Çoklu Gateway ve cihaz konumlarını harita üzerinde gösterir.
+    Shadowing etkisi nedeniyle SF bölgeleri artık karışık (gerçekçi).
     """
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(12, 12))
     
-    # Gateway
-    plt.scatter(0, 0, c='red', marker='H', s=200, label='Gateway', zorder=5)
-    
-    # SF Bölgeleri (Halkalar)
-    circles = [1000, 2000, 3000, 4000, 5000]
-    colors = ['#e1f5fe', '#b3e5fc', '#81d4fa', '#4fc3f7', '#29b6f6', '#039be5']
-    labels = ['SF7', 'SF8', 'SF9', 'SF10', 'SF11', 'SF12']
-    
-    for i, r in enumerate(circles):
-        circle = plt.Circle((0, 0), r, fill=False, linestyle='--', alpha=0.3)
-        plt.gca().add_patch(circle)
+    # Gateways
+    for i, gw_pos in enumerate(sim.gateways):
+        plt.scatter(gw_pos[0], gw_pos[1], c='red', marker='H', s=300, 
+                    label=f'Gateway {i}' if i == 0 else "", zorder=5)
+        plt.text(gw_pos[0], gw_pos[1]+200, f'GW{i}', fontsize=12, fontweight='bold', ha='center')
     
     # Çöp Kutuları
     scatter = plt.scatter(sim.bin_positions[:, 0], sim.bin_positions[:, 1], 
-                         c=sim.bin_sfs, cmap='viridis', s=100, edgecolors='black', label='Smart Bins')
+                         c=sim.bin_sfs, cmap='viridis', s=80, edgecolors='black', 
+                         alpha=0.8, label='Smart Bins')
     
     plt.colorbar(scatter, label='Spreading Factor (SF)')
-    plt.title('Akıllı Çöp Kutuları Konum ve SF Dağılımı (Şehir Haritası)')
+    plt.title(f'Profesyonel Ağ Haritası: {len(sim.gateways)} Gateway & {sim.num_bins} Cihaz')
     plt.xlabel('Mesafe (X - metre)')
     plt.ylabel('Mesafe (Y - metre)')
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.legend()
     plt.axis('equal')
     plt.savefig('images/city_map_sf_distribution.png')
-    print("City map saved as images/city_map_sf_distribution.png")
+    print("Multi-Gateway map saved as images/city_map_sf_distribution.png")
 
 def plot_energy_analysis(results):
     """

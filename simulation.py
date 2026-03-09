@@ -2,39 +2,58 @@ from utils import calculate_time_on_air, calculate_bit_rate, calculate_energy_co
 import numpy as np
 
 class SmartCitySimulation:
-    def __init__(self, num_bins=20, area_size=5000):
+    def __init__(self, num_bins=100, area_size=10000, num_gateways=4):
         self.num_bins = num_bins
-        self.gateway_pos = (0, 0)
-        self.bin_positions = np.random.uniform(-area_size/2, area_size/2, (num_bins, 2))
-        self.distances = np.linalg.norm(self.bin_positions - self.gateway_pos, axis=1)
+        # Çoklu Gateway Yerleşimi (Kare şeklinde dağılım)
+        offset = area_size / 4
+        self.gateways = np.array([
+            [offset, offset], [-offset, offset], 
+            [offset, -offset], [-offset, -offset]
+        ])[:num_gateways]
         
-        # Faz 2: Sinyal Parametreleri
-        self.tx_power = 14 # dBm (Yasal limit)
-        self.noise_floor = -110 # dBm
+        self.bin_positions = np.random.uniform(-area_size/2, area_size/2, (num_bins, 2))
+        
+        # Faz 4: Sinyal ve GW Seçim Parametreleri
+        self.tx_power = 14 
+        self.noise_floor = -110 
         self.bin_sfs = []
         self.bin_rssis = []
         self.bin_snrs = []
-        
-        for d in self.distances:
-            # 1. Path Loss + Shadowing (rastgele bina/engel etkisi)
-            shadowing = np.random.normal(0, 6) # 6dB standart sapma
-            pl = calculate_path_loss(d) + shadowing
+        self.best_gateways = []
+        self.distances = [] # En yakın GW mesafesi
+
+        for pos in self.bin_positions:
+            best_snr = -999
+            best_rssi = -999
+            best_sf = 12
+            best_gw_idx = 0
+            min_dist = 99999
             
-            # 2. RSSI ve SNR Hesapla
-            rssi = self.tx_power - pl
-            snr = rssi - self.noise_floor
+            for gw_idx, gw_pos in enumerate(self.gateways):
+                d = np.linalg.norm(pos - gw_pos)
+                shadowing = np.random.normal(0, 6)
+                pl = calculate_path_loss(d) + shadowing
+                rssi = self.tx_power - pl
+                snr = rssi - self.noise_floor
+                
+                # En iyi gateway'i seç (En yüksek SNR)
+                if snr > best_snr:
+                    best_snr = snr
+                    best_rssi = rssi
+                    best_gw_idx = gw_idx
+                    min_dist = d
             
-            self.bin_rssis.append(rssi)
-            self.bin_snrs.append(snr)
-            
-            # 3. ADR: Bu sinyal kalitesi için en iyi (en düşük) SF'yi seç
-            best_sf = 12 # Default en güvenli
+            # ADR: En iyi link için SF seç
             for sf in [7, 8, 9, 10, 11, 12]:
-                required_snr = get_required_snr(sf)
-                if snr >= required_snr + 5: # 5dB güvenlik marjı
+                if best_snr >= get_required_snr(sf) + 5:
                     best_sf = sf
                     break
+            
             self.bin_sfs.append(best_sf)
+            self.bin_rssis.append(best_rssi)
+            self.bin_snrs.append(best_snr)
+            self.best_gateways.append(best_gw_idx)
+            self.distances.append(min_dist)
             
     def run_analysis(self):
         results = []
@@ -66,6 +85,7 @@ class SmartCitySimulation:
                 'sf': sf,
                 'rssi': rssi,
                 'snr': snr,
+                'gateway_id': self.best_gateways[i],
                 'toa': toa,
                 'energy': energy,
                 'bit_rate': calculate_bit_rate(sf),
