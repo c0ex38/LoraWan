@@ -20,9 +20,28 @@
                     <li><span>🗺️</span> Network Map</li>
                     <li><span>📉</span> Scalability</li>
                     <li><span>🔋</span> Energy Analysis</li>
-                    <li><span>📜</span> Technical Report</li>
                 </ul>
             </nav>
+
+            <div class="sim-settings" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <h3 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Simulation Settings</h3>
+                <div style="margin-top: 1.5rem;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Number of Bins</label>
+                    <input type="range" id="num_bins" min="10" max="2000" value="100" style="width: 100%; margin: 10px 0;">
+                    <span id="bins_val" style="font-size: 0.9rem; font-weight: bold;">100</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Gateways</label>
+                    <input type="range" id="num_gateways" min="1" max="8" value="4" style="width: 100%; margin: 10px 0;">
+                    <span id="gateways_val" style="font-size: 0.9rem; font-weight: bold;">4</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Area (km²)</label>
+                    <input type="range" id="area_size" min="1000" max="15000" step="1000" value="5000" style="width: 100%; margin: 10px 0;">
+                    <span id="area_val" style="font-size: 0.9rem; font-weight: bold;">5.0</span>
+                </div>
+                <button id="run_sim_btn" class="card" style="width: 100%; margin-top: 2rem; background: var(--primary); color: white; cursor: pointer; border: none; padding: 10px; font-weight: bold;">RUN SIMULATION</button>
+            </div>
         </aside>
 
         <!-- Main Content -->
@@ -36,19 +55,19 @@
             <section class="stats-grid">
                 <div class="card">
                     <span class="stat-label">Total Devices</span>
-                    <span class="stat-value">1,000</span>
+                    <span id="stat_bins" class="stat-value">1,000</span>
                 </div>
                 <div class="card">
                     <span class="stat-label">Gateways</span>
-                    <span class="stat-value" style="color: var(--secondary);">4</span>
+                    <span id="stat_gateways" class="stat-value" style="color: var(--secondary);">4</span>
                 </div>
                 <div class="card">
                     <span class="stat-label">Avg Success Rate (PDR)</span>
-                    <span class="stat-value" style="color: var(--accent);">98.9%</span>
+                    <span id="stat_pdr" class="stat-value" style="color: var(--accent);">98.9%</span>
                 </div>
                 <div class="card">
                     <span class="stat-label">Packet Loss (Blindness)</span>
-                    <span class="stat-value" style="color: #ef4444;">11.2%</span>
+                    <span id="stat_blindness" class="stat-value" style="color: #ef4444;">11.2%</span>
                 </div>
             </section>
 
@@ -57,23 +76,22 @@
                 <div class="map-container">
                     <h3>Multi-Gateway Spatial Distribution</h3>
                     <p class="subtitle" style="margin-bottom: 1rem;">Real-time ADR mapping with Shadowing effects</p>
-                    <!-- Görseller images klasöründen referans alınacak -->
-                    <img src="../images/city_map_sf_distribution.png" alt="Ağ Haritası">
+                    <img id="img_map" src="/images/city_map_sf_distribution.png" alt="Ağ Haritası">
                 </div>
 
                 <div class="chart-card">
                     <h3>Scalability & Blindness</h3>
-                    <img src="../images/network_pdr_analysis.png" alt="PDR Analizi">
+                    <img id="img_pdr" src="/images/network_pdr_analysis.png" alt="PDR Analizi">
                 </div>
 
                 <div class="chart-card">
                     <h3>Energy & Battery Life</h3>
-                    <img src="../images/energy_analysis.png" alt="Enerji Analizi">
+                    <img id="img_energy" src="/images/energy_analysis.png" alt="Enerji Analizi">
                 </div>
 
                 <div class="chart-card">
                     <h3>Signal Quality (Shadowing)</h3>
-                    <img src="../images/signal_quality.png" alt="Sinyal Kalitesi">
+                    <img id="img_signal" src="/images/signal_quality.png" alt="Sinyal Kalitesi">
                 </div>
 
                 <div class="chart-card">

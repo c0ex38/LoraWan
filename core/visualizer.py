@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import calculate_time_on_air, calculate_bit_rate
+from .utils import calculate_time_on_air, calculate_bit_rate
 
 def plot_sf_analysis(results):
     sfs = [r['sf'] for r in results]
@@ -24,7 +24,7 @@ def plot_sf_analysis(results):
 
     plt.title('LoRaWAN SF Analysis: Time on Air vs Data Rate')
     fig.tight_layout()
-    plt.savefig('images/sf_analysis_plot.png')
+    plt.savefig('assets/plots/sf_analysis_plot.png')
     print("Graph saved as images/sf_analysis_plot.png")
 
 def plot_theoretical_limits():
@@ -47,7 +47,7 @@ def plot_theoretical_limits():
     plt.ylabel('bps')
 
     plt.tight_layout()
-    plt.savefig('images/theoretical_limits.png')
+    plt.savefig('assets/plots/theoretical_limits.png')
     print("Theoretical limits graph saved as images/theoretical_limits.png")
 
 def plot_spatial_distribution(sim):
@@ -75,7 +75,7 @@ def plot_spatial_distribution(sim):
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.legend()
     plt.axis('equal')
-    plt.savefig('images/city_map_sf_distribution.png')
+    plt.savefig('assets/plots/city_map_sf_distribution.png')
     print("Multi-Gateway map saved as images/city_map_sf_distribution.png")
 
 def plot_energy_analysis(results):
@@ -108,7 +108,7 @@ def plot_energy_analysis(results):
 
     plt.title('LoRaWAN SF Impact on Battery Life and Energy')
     fig.tight_layout()
-    plt.savefig('images/energy_analysis.png')
+    plt.savefig('assets/plots/energy_analysis.png')
     print("Energy analysis plot saved as images/energy_analysis.png")
 
 def plot_collision_analysis(results):
@@ -135,7 +135,7 @@ def plot_collision_analysis(results):
     plt.ylabel('Collision Probability (%)')
     plt.grid(True)
     plt.legend()
-    plt.savefig('images/collision_analysis.png')
+    plt.savefig('assets/plots/collision_analysis.png')
     print("Collision analysis plot saved as images/collision_analysis.png")
 
 def plot_signal_quality(results):
@@ -168,7 +168,7 @@ def plot_signal_quality(results):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig('images/signal_quality.png')
+    plt.savefig('assets/plots/signal_quality.png')
     print("Signal quality plot saved as images/signal_quality.png")
 
 def plot_pdr_analysis(sim_class, area_size=5000):
@@ -220,7 +220,7 @@ def plot_pdr_analysis(sim_class, area_size=5000):
     plt.grid(axis='y', linestyle=':')
 
     plt.tight_layout()
-    plt.savefig('images/network_pdr_analysis.png')
+    plt.savefig('assets/plots/network_pdr_analysis.png')
     print("Detailed PDR analysis plot saved as images/network_pdr_analysis.png")
 
 if __name__ == "__main__":

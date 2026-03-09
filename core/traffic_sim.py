@@ -1,5 +1,5 @@
 import numpy as np
-from utils import calculate_time_on_air, check_collision_sir
+from .utils import calculate_time_on_air, check_collision_sir
 
 class TrafficSimulator:
     def __init__(self, simulation_results, duration_seconds=3600, num_channels=8):

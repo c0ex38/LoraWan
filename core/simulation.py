@@ -1,4 +1,4 @@
-from utils import calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, calculate_path_loss, get_required_snr, get_sf_sensitivity
+from .utils import calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, calculate_path_loss, get_required_snr, get_sf_sensitivity
 import numpy as np
 
 class SmartCitySimulation:

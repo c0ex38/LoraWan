@@ -1,6 +1,6 @@
 import os
-from simulation import SmartCitySimulation
-from visualizer import (plot_sf_analysis, plot_theoretical_limits, plot_spatial_distribution, 
+from core.simulation import SmartCitySimulation
+from core.visualizer import (plot_sf_analysis, plot_theoretical_limits, plot_spatial_distribution, 
                         plot_energy_analysis, plot_collision_analysis, plot_signal_quality, plot_pdr_analysis)
 
 def main():
