@@ -59,6 +59,8 @@ class TrafficSimulator:
         success_count = 0
         collision_count = 0
         blindness_count = 0
+        co_sf_collisions = 0
+        cross_sf_collisions = 0
         gw_busy_slots = {i: [] for i in range(20)} # Max 20 GW desteği
         
         # Cihaz bazlı başarı takibi
@@ -72,6 +74,9 @@ class TrafficSimulator:
             all_gw_stats = next(d['all_gw_stats'] for d in self.devices if d['id'] == dev_id)
             
             packet_received_by_any_gw = False
+            
+            # Bu paket için hata nedenlerini takip et (Görselleştirme için p1'e eklenebilir)
+            p1_collision_type = None
             
             for gw_id_str, stats in all_gw_stats.items():
                 gw_id = int(gw_id_str)
@@ -91,28 +96,35 @@ class TrafficSimulator:
                 collision = False
                 for j, p2 in enumerate(self.packets):
                     if i == j: continue
-                    # Aynı gateway ve aynı kanalda çakışma olur
+                    # Aynı gateway ve aynı kanalda çakışma riski
                     overlap = not (p1['end_time'] < p2['start_time'] or p2['end_time'] < p1['start_time'])
                     same_channel = (p1['channel_id'] == p2['channel_id'])
                     
                     # ÖNEMLİ: P2 de bu Gateway tarafından duyuluyor mu?
-                    p2_dev = next(d for d in self.devices if d['id'] == p2['device_id'])
+                    p2_dev = next((d for d in self.devices if d['id'] == p2['device_id']), None)
+                    if not p2_dev: continue
                     p2_at_this_gw = p2_dev['all_gw_stats'].get(str(gw_id))
                     
                     if overlap and same_channel and p2_at_this_gw:
+                        # LoRa PHY: P1 paketi bu girişimden kurtulabilir mi? (SIR Analizi)
                         p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_at_this_gw['rssi'])
+                        
                         if not p1_survives:
                             collision = True
+                            # Hata tipi tayini
+                            if p1['sf'] == p2['sf']:
+                                p1_collision_type = 'CO_SF'
+                            else:
+                                p1_collision_type = 'CROSS_SF'
                             break
                 
                 if not collision:
-                    # Bu gateway paketi başarıyla aldı!
+                    # Bu gateway paketi başarıyla aldı! (Belki capture effect sayesinde, belki de temiz kanal)
                     packet_received_by_any_gw = True
                     # Başarılı alım sonrası ACK penceresi için GW'yı meşgul et
                     ack_start = p1['end_time'] + 1.0
                     ack_end = ack_start + (calculate_time_on_air(10, p1['sf']) / 1000)
                     gw_busy_slots[gw_id].append((ack_start, ack_end))
-                    # Bir gateway alması yeterli (De-duplication)
                     break
             
             if packet_received_by_any_gw:
@@ -120,11 +132,17 @@ class TrafficSimulator:
                 success_count += 1
                 device_stats[dev_id]['success'] += 1
             else:
-                # Hiçbir GW alamadıysa en son hata durumunu ata (Basitleştirme için)
                 p1['status'] = 'FAILED'
-                # İstatistiksel takip için (opsiyonel)
-                if is_blind: blindness_count += 1
-                elif collision: collision_count += 1
+                if is_blind: 
+                    blindness_count += 1
+                elif p1_collision_type == 'CO_SF':
+                    co_sf_collisions += 1
+                    collision_count += 1
+                elif p1_collision_type == 'CROSS_SF':
+                    cross_sf_collisions += 1
+                    collision_count += 1
+                else:
+                    collision_count += 1 # Genel çakışma
 
         # Cihaz listesine PDR ekle
         for dev in self.devices:
@@ -136,6 +154,8 @@ class TrafficSimulator:
             'total_packets': len(self.packets),
             'success': success_count,
             'collision': collision_count,
+            'co_sf_collisions': co_sf_collisions,
+            'cross_sf_collisions': cross_sf_collisions,
             'blindness': blindness_count,
             'pdr': pdr
         }

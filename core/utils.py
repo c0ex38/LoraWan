@@ -79,23 +79,32 @@ def calculate_collision_probability(num_devices, toa_ms, interval_s):
 
 def check_collision_sir(p1_sf, p2_sf, p1_rssi, p2_rssi):
     """
-    LoRa SIR (Signal-to-Interference Ratio) tabanlı çakışma kontrolü.
-    Farklı SF'ler birbirine karşı belirli bir koruma sağlar (Orthogonality).
+    LoRa PHY SIR (Signal-to-Interference Ratio) ve Capture Effect Analizi.
+    Inter-SF Rejection Matrix (Semtech/ITU standartları baz alınmıştır).
     """
-    # SIR Thresholds (dB) - Ortak LoRa modellerinden alınmıştır
-    # Aynı SF çakışması için ~6dB fark gerekir.
-    sir_thresholds = {
-        (7, 7): 6, (8, 8): 6, (9, 9): 6, (10, 10): 6, (11, 11): 6, (12, 12): 6,
-        # Farklı SF'ler arası (örnek değerler)
-        (7, 8): -16, (7, 9): -18, (7, 10): -20,
-        (8, 7): -16, (8, 9): -16, (9, 7): -18
-    }
-    
-    threshold = sir_thresholds.get((p1_sf, p2_sf), -20)
     sir = p1_rssi - p2_rssi
     
-    # SIR threshold'dan büyükse p1 hayatta kalır
-    return sir > threshold
+    # 1. AYNI SF DURUMU (CO-CHANNEL INTERFERENCE / CAPTURE EFFECT)
+    if p1_sf == p2_sf:
+        # Capture Effect: Sinyal farkı 6dB'den büyükse güçlü olan paket kurtulur.
+        return sir >= 6
+    
+    # 2. FARKLI SF DURUMU (ADJACENT-SF INTERFERENCE)
+    # Rejection Matrix: Satır p1_sf, Sütun p2_sf (Girişim yapan)
+    # Değerler: p1'in hayatta kalması için p2'den ne kadar güçlü olması gerektiği (SIR_req)
+    rejection_matrix = {
+        7:  {8: -16, 9: -18, 10: -20, 11: -22, 12: -25},
+        8:  {7: -16, 9: -16, 10: -18, 11: -20, 12: -22},
+        9:  {7: -18, 8: -16, 10: -16, 11: -18, 12: -20},
+        10: {7: -20, 8: -18, 9: -16, 11: -16, 12: -18},
+        11: {7: -22, 8: -20, 9: -18, 10: -16, 12: -16},
+        12: {7: -25, 8: -22, 9: -20, 10: -18, 11: -16}
+    }
+    
+    threshold = rejection_matrix.get(p1_sf, {}).get(p2_sf, -20)
+    
+    # SIR, threshold'dan büyükse p1 bu girişime rağmen duyulabilir.
+    return sir >= threshold
 
 def calculate_path_loss(distance_m, f_mhz=868, n=3.0, d0=1.0, pl0=14.7):
     """

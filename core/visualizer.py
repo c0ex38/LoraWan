@@ -481,9 +481,39 @@ def plot_gateway_redundancy(sim):
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.legend()
     
-    plt.savefig('assets/plots/gateway_redundancy.png', dpi=150, bbox_inches='tight')
+def plot_spectral_efficiency(traffic_results):
+    """
+    Kanal Verimliliği ve Çakışma Türleri Analizi.
+    Faz 19: Inter-SF vs Co-SF Girişimi
+    """
+    labels = ['Başarılı', 'Aynı SF Çakışma', 'Cross-SF Çakışma', 'Gateway Körlüğü']
+    success = traffic_results.get('success', 0)
+    co_sf = traffic_results.get('co_sf_collisions', 0)
+    cross_sf = traffic_results.get('cross_sf_collisions', 0)
+    blind = traffic_results.get('blindness', 0)
+    
+    sizes = [success, co_sf, cross_sf, blind]
+    colors = ['#2ecc71', '#e67e22', '#e74c3c', '#95a5a6']
+    
+    # Sıfır olanları temizle (Grafikte çirkin durmasın)
+    final_labels = []
+    final_sizes = []
+    final_colors = []
+    for l, s, c in zip(labels, sizes, colors):
+        if s > 0:
+            final_labels.append(l)
+            final_sizes.append(s)
+            final_colors.append(c)
+
+    plt.figure(figsize=(10, 7))
+    plt.pie(final_sizes, labels=final_labels, autopct='%1.1f%%', startangle=140, colors=final_colors, explode=[0.05]*len(final_sizes))
+    
+    plt.title("Ağ Spektral Verimlilik ve Girişim Dağılımı\nFaz 19: Capture Effect & Inter-SF Analizi")
+    plt.axis('equal')
+    
+    plt.savefig('assets/plots/spectral_efficiency.png', dpi=150, bbox_inches='tight')
     plt.close('all')
-    print("Gateway Redundancy plot saved as assets/plots/gateway_redundancy.png")
+    print("Spectral Efficiency plot saved as assets/plots/spectral_efficiency.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
