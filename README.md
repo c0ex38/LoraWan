@@ -74,11 +74,11 @@ Ardından tarayıcınızdan şu adrese gidin:
 
 ### Çoklu Gateway ve SF Dağılımı
 
-![City Map](images/city_map_sf_distribution.png)
+![City Map](assets/plots/city_map_sf_distribution.png)
 
 ### Ağ Ölçeklenebilirliği ve Kayıp Analizi
 
-![PDR Analysis](images/network_pdr_analysis.png)
+![PDR Analysis](assets/plots/network_pdr_analysis.png)
 
 ## � Teknik Rapor
 
