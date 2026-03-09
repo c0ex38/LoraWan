@@ -1,17 +1,18 @@
-# LoRaWAN Simulation Configuration Module
+# LoRaWAN Simülasyon Konfigürasyon Modülü
 
-# -- Fiziksel Katman Parametreleri --
-DEFAULT_BW = 125  # kHz
-DEFAULT_CR = 1    # 4/5
-PREAMBLE_LEN = 8
+# -- Fiziksel Katman (PHY) Parametreleri --
+DEFAULT_BW = 125  # Bant Genişliği (kHz) - Standart LoRaWAN kanalı
+DEFAULT_CR = 1    # Kodlama Oranı (4/5) - Hata düzeltme kapasitesi
+PREAMBLE_LEN = 8  # Giriş sembol sayısı
 
-# -- Enerji Parametreleri --
-TX_CURRENT_MA = 120.0
-SLEEP_CURRENT_UA = 2.0
-OPERATING_VOLTAGE = 3.3
-BATTERY_CAPACITY_MAH = 2500
+# -- Enerji Tüketim Parametreleri --
+TX_CURRENT_MA = 120.0     # İletim anındaki akım (mA)
+SLEEP_CURRENT_UA = 2.0    # Uyku modundaki akım (uA)
+OPERATING_VOLTAGE = 3.3   # Çalışma gerilimi (Volt)
+BATTERY_CAPACITY_MAH = 2500 # Pil kapasitesi (mAh)
 
-# -- Sinyal ve Hassasiyet Eşikleri (SX1276 bazlı) --
+# -- Sinyal ve Hassasiyet Eşikleri (SX1276 Sensör Verileri) --
+# Her Spreading Factor (SF) için alıcının duyabileceği minimum sinyal seviyesi (dBm)
 SF_SENSITIVITY = {
     7: -123,
     8: -126,
@@ -21,6 +22,7 @@ SF_SENSITIVITY = {
     12: -137
 }
 
+# Başarılı iletişim için gereken minimum Sinyal-Gürültü Oranı (SNR)
 REQUIRED_SNR = {
     7: -7.5,
     8: -10,
@@ -30,11 +32,10 @@ REQUIRED_SNR = {
     12: -20
 }
 
-# -- Protokol Kısıtları (EU868) --
-DUTY_CYCLE_LIMIT = 0.01  # %1
+# -- Protokol Kısıtları (EU868 Avrupa Standartları) --
+DUTY_CYCLE_LIMIT = 0.01  # %1 Görev Döngüsü - Yasal iletim sınırı
 MTU_LIMITS = {
     7: 222,
-    13: 222, # SF7-8
     8: 222,
     9: 115,
     10: 51,
@@ -42,8 +43,8 @@ MTU_LIMITS = {
     12: 51
 }
 
-# -- SIR / Rejection Matrix (Inter-SF Interference) --
-# Değerler: p1'in hayatta kalması için p2'den ne kadar güçlü olması gerektiği (SIR_req)
+# -- SIR / Rejection Matrix (SF'ler Arası Girişim Analizi) --
+# p1 paketinin, p2 girişimine rağmen duyulabilmesi için gereken SIR eşik değerleri
 REJECTION_MATRIX = {
     7:  {8: -16, 9: -18, 10: -20, 11: -22, 12: -25},
     8:  {7: -16, 9: -16, 10: -18, 11: -20, 12: -22},
@@ -53,13 +54,20 @@ REJECTION_MATRIX = {
     12: {7: -25, 8: -22, 9: -20, 10: -18, 11: -16}
 }
 
-# -- Çakışma ve Capture Effect --
-CAPTURE_EFFECT_THRESHOLD = 6.0  # dB
+# -- Çakışma ve Yakalama Etkisi (Capture Effect) --
+# Aynı kanalda gelen iki paketten biri diğerinden 6dB güçlüyse, güçlü olan 'yakalanabilir'.
+CAPTURE_EFFECT_THRESHOLD = 6.0  
 
-# -- Senaryo Ayarları --
-PATH_LOSS_EXPONENT = 3.0
-SHADOWING_STD_NORMAL = 6.0
-SHADOWING_STD_STORM = 12.0
-JAMMER_RADIUS = 500  # metre
-JAMMER_POWER_DB = 30 # dB suppression
-CHAOS_FAILURE_CHANCE = 0.05 # %5
+# -- Ağ ve Şehir Ayarları --
+NUM_CHANNELS = 8           # Toplam frekans kanalı sayısı
+MAX_GATEWAYS = 20          # Simülasyonun desteklediği maksimum Gateway kapasitesi
+MIN_RSSI_THRESHOLD = -130  # Bir paketin gateway tarafından algılanabilmesi için min. RSSI
+
+# -- Senaryo ve Kaos Parametreleri --
+PATH_LOSS_EXPONENT = 3.0    # Yol kaybı üssü (Şehir içi ortam için 3.0-4.0)
+SHADOWING_STD_NORMAL = 6.0  # Normal havada standart sapma (dB)
+SHADOWING_STD_STORM = 12.0  # Fırtınalı havada standart sapma (dB)
+JAMMER_RADIUS = 500         # Sinyal karıştırıcının etki yarıçapı (metre)
+JAMMER_POWER_DB = 30        # Karıştırıcının sinyal bastırma gücü (dB)
+CHAOS_FAILURE_CHANCE = 0.05 # Kaos modunda cihazın rastgele bozulma ihtimali (%5)
+ACK_PAYLOAD_BYTES = 10      # Gateway'den gönderilen onay paketinin boyutu

@@ -7,61 +7,70 @@ from .utils import (
 import numpy as np
 
 class SmartCitySimulation:
+    """
+    Akıllı Şehir LoRaWAN Dijital İkiz Simülatörü.
+    Şehir yerleşimi, sinyal yayılımı ve ağ performans analizinden sorumludur.
+    """
     def __init__(self, num_bins=100, area_size=10000, num_gateways=4, scenario='NORMAL'):
-        self.num_bins = num_bins
-        self.area_size = area_size
-        self.scenario = scenario
-        self.tx_power = 14 
-        self.noise_floor = calculate_noise_floor()
+        """
+        Simülasyon dünyasını ilklendirir.
+        num_bins: Cihaz sayısı, area_size: Alan boyutu (m), scenario: Çalışma modu.
+        """
+        self.num_bins = num_bins # Simülasyondaki toplam cihaz sayısı
+        self.area_size = area_size # Simülasyon alanının boyutu (metre cinsinden, kare alan)
+        self.scenario = scenario # Simülasyon senaryosu (NORMAL, CHAOS, FAILURE, STORM)
+        self.tx_power = 14 # Cihaz iletim gücü (dBm)
+        self.noise_floor = calculate_noise_floor() # Ortam gürültüsü (dBm)
         
-        # Listeler
-        self.device_types = []
-        self.bin_sfs = []
-        self.all_gw_stats = []
-        self.best_gateways = []
-        self.distances = []
-        self.device_statuses = []
-        self.failure_reasons = []
+        # Veri Depolama Yapıları
+        self.failure_reasons = [] # Hata nedenleri (DEAD, JAMMED vb.)
         
-        self._initialize_gateways(num_gateways)
-        self._apply_chaos_parameters()
-        self._process_devices()
-        self._populate_legacy_stats()
+        self._initialize_gateways(num_gateways) # Gateway'leri yerleştir
+        self._apply_chaos_parameters()           # Kaos senaryosunu uygula
+        self._process_devices()                  # Cihazları konuşlandır ve sinyal hesapla
+        self._populate_legacy_stats()            # Dashboard için verileri hazırla
 
     def _initialize_gateways(self, num_gateways):
+        """Gateway'leri alanın dört köşesine simetrik olarak yerleştirir."""
         offset = self.area_size / 4
         self.gateways = np.array([
             [offset, offset], [-offset, offset], 
             [offset, -offset], [-offset, -offset]
         ])[:num_gateways]
 
+        # Arıza Senaryosu: İlk gateway bozulur.
         if self.scenario == 'FAILURE' and len(self.gateways) > 1:
             self.gateways = self.gateways[1:]
 
     def _apply_chaos_parameters(self):
+        """Kaos modu için sinyal karıştırıcı (jammer) ve diğer parametreleri ayarlar."""
         self.is_chaos = (self.scenario == 'CHAOS')
         self.jammer_pos = np.array([1000, 1000]) if self.is_chaos else None
 
     def _calculate_device_signal(self, pos, d_type):
+        """Belirli bir noktadaki cihazın tüm gateway'ler bazındaki sinyal sağlığını hesaplar."""
         gw_stats = {}
         best_snr = -float('inf')
         best_gw_idx = -1
 
         for g_idx, gw_pos in enumerate(self.gateways):
-            d = np.linalg.norm(pos - gw_pos)
+            d = np.linalg.norm(pos - gw_pos) # Öklid mesafesi
+            
+            # İç mekan / Yer altı kaybı (Su sayaçları için +20dB ek kayıp)
             indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
             
             pl = calculate_path_loss(d) + indoor_loss
             
-            # Shadowing (Config'den çekiliyor)
+            # Shadowing (Gölgeleme Etkisi) - Şehir içi binaları temsil eder
             std = config.SHADOWING_STD_STORM if self.scenario == 'STORM' else config.SHADOWING_STD_NORMAL
             mean = -10 if self.scenario == 'STORM' else 0
             shadowing = np.random.normal(mean, std)
             
-            # Fading & Jamming
+            # Fading (Sönümlenme) ve Jamming (Karıştırma)
             fading = np.random.uniform(-10, 5) if self.is_chaos else 0
             jamming = 0
             if self.is_chaos:
+                # Jammer'a yakınlık sinyali 30dB bastırır.
                 if np.linalg.norm(pos - self.jammer_pos) < config.JAMMER_RADIUS:
                     jamming = config.JAMMER_POWER_DB
             
@@ -80,6 +89,7 @@ class SmartCitySimulation:
         return gw_stats, best_snr, best_gw_idx
 
     def _process_devices(self):
+        """Tüm cihazları alana dağıtır ve ağ bağlantılarını (ADR) optimize eder."""
         types = ['BIN', 'LIGHT', 'WATER', 'AIR']
         self.bin_positions = np.random.uniform(-self.area_size/2, self.area_size/2, (self.num_bins, 2))
 
@@ -88,20 +98,22 @@ class SmartCitySimulation:
             self.device_types.append(d_type)
             pos = self.bin_positions[i]
             
+            # Kaos Modunda rastgele donanım arızası
             is_dead = self.is_chaos and np.random.random() < config.CHAOS_FAILURE_CHANCE
             gw_stats, best_snr, best_gw_idx = self._calculate_device_signal(pos, d_type)
             
-            best_sf = 7
+            best_sf = 7 # Varsayılan hızlı transfer
             status = 'ACTIVE'
             failure_reason = None
 
             if is_dead:
                 status, failure_reason, best_sf = 'FAILED', 'DEAD', -1
-            elif best_snr < get_required_snr(12):
+            elif best_snr < get_required_snr(12): # En yüksek SF bile kurtarmıyorsa kopar
                 status, failure_reason, best_sf = 'FAILED', 'NO_LINK', -1
             else:
+                # ADR Mantığı: SNR'a göre en verimli SF'yi seç (Dinamik Optimizasyon)
                 for sf_val in range(7, 13):
-                    if best_snr >= get_required_snr(sf_val) + 5:
+                    if best_snr >= get_required_snr(sf_val) + 5: # 5dB güvenlik payı ile
                         best_sf = sf_val
                         break
                 else:
@@ -115,6 +127,7 @@ class SmartCitySimulation:
             self.failure_reasons.append(failure_reason)
 
     def _populate_legacy_stats(self):
+        """Dashboard uyumluluğu için temel RSSI/SNR listelerini doldurur."""
         self.bin_rssis = []
         self.bin_snrs = []
         for j in range(self.num_bins):
