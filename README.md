@@ -1,89 +1,67 @@
-# 📡 LoRaWAN Spreading Factor & Network Capacity Simulator
+# 📡 LoRaWAN Digital Twin: Spreading Factor & Network Capacity Simulator
 
-Bu proje, LoRaWAN ağlarının fiziksel katman (PHY) ve MAC katmanı davranışlarını bir Akıllı Şehir senaryosu üzerinden simüle eden kapsamlı bir analiz aracıdır. Temel amacı, cihaz yoğunluğu arttıkça ağın kapasite sınırlarını, paket kayıp nedenlerini ve enerji verimliliğini bilimsel modellerle ortaya koymaktır.
+Bu proje, LoRaWAN ağlarının fiziksel katman (PHY) ve MAC katmanı davranışlarını bir Akıllı Şehir senaryosu üzerinden simüle eden 20 aşamalı, kapsamlı bir analiz ve araştırma aracıdır.
 
-## 🧐 Proje Ne Yapıyor?
+## 🚀 Proje Evrimi: 20 Fazlık Teknik Maraton
 
-Simülasyon, bir şehre dağıtılmış binlerce akıllı sensörün (örneğin akıllı çöp kutuları) ve onları dinleyen birden fazla Gateway'in (baz istasyonu) davranışlarını şu adımlarla taklit eder:
+Bu simülatör, basit bir radyo modelinden başlayarak sektör standartlarında bir **Digital Twin** (Dijital İkiz) haline getirilmiştir. Tüm gelişim sürecini ve teknik ispatları [Teknik Dokümantasyon Dizini](docs/README.md) üzerinden inceleyebilirsiniz.
 
-### 1. Akıllı Konumlandırma ve Radyo Modelleme
+### 🌟 Önemli Kilometre Taşları
 
-- **Şehir Planlama:** Belirlenen bir alanda (örneğin 10km²) sensörleri rastgele dağıtır.
-- **Gerçekçi Sinyal Kaybı:** Sadece mesafe değil, şehir içindeki bina ve engelleri temsil eden **Log-Normal Shadowing** (gölgeleme) efektlerini kullanarak RSSI ve SNR değerlerini hesaplar.
+- **Faz 1-5:** Temel koordinat sistemi, Path Loss modelleri ve çoklu Gateway mimarisi.
+- **Faz 6-10:** ADR (Adaptive Data Rate) algoritmaları ve mekansal haritalama (Heatmap).
+- **Faz 11-15:** Enerji tüketimi modelleme, yasal kısıtlar (Duty Cycle) ve MTU limitleri.
+- **Faz 16-20:** **Kaos Mühendisliği**, Link Margin analizi, **Macro-Diversity** (Yedeklilik), **Inter-SF Interference** ve $O(N \log N)$ performans optimizasyonu.
 
-### 2. Dinamik ADR (Adaptive Data Rate) Kontrolü
+## 🧐 Öne Çıkan İleri Seviye Özellikler
 
-- Her cihaz, sinyal kalitesine (SNR) göre en verimli **Spreading Factor (SF7-SF12)** değerini seçer. Gateway'e yakın cihazlar SF7 ile yüksek hızda, uzak cihazlar SF12 ile yüksek hassasiyette iletişim kurar.
-
-### 3. Zaman Tabanlı (Discrete Event) Trafik Simülasyonu
-
-- Cihazlar saniye saniye takip edilir. Her cihazın ne zaman paket göndereceği, paketin havada kalma süresi (**Time on Air**) ve hangi frekansta olduğu hesaplanır.
-
-### 4. Karmaşık Paket Kayıp Analizi
-
-Proje, paketlerin neden ulaşmadığını iki ana nedene dayandırır:
-
-- **Çakışmalar (Collisions):** Aynı anda, aynı kanal ve SF'de gelen paketlerin birbirini bozması (SIR - Sinyal Girişim Oranı bazlı).
-- **Gateway Körlüğü (Blindness):** LoRaWAN gateway'leri genelde "Half-Duplex"tir. Bir gateway bir cihaza onay (ACK) gönderirken, o sırada gelen diğer hiçbir paketi duyamaz. Proje bu kritik kaybı detaylıca analiz eder.
-
-### 5. Enerji ve Pil Ömrü Tahmini
-
-- Her paket gönderiminde tüketilen mili-joule (mJ) cinsinden enerji hesaplanır ve cihazların pil ömürleri (yıl bazında) SF değerlerine göre raporlanır.
-
-## 🌟 Öne Çıkan Özellikler
-
-- **Gelişmiş Radyo Modeli:** Log-Distance Path Loss ve rastgele **Shadowing (6dB)** etkileri ile gerçekçi şehir ortamı.
-- **Dinamik ADR (Adaptive Data Rate):** Cihazların sinyal kalitesine (SNR) göre en uygun SF7-SF12 değerini otomatik seçmesi.
-- **Çoklu Gateway (Macro-Diversity):** Şehre dağıtılmış 4 kule üzerinden kapsama alanı analizi.
-- **Frekans Atlamalı İletişim:** 8 farklı frekans kanalında trafik simülasyonu.
-- **Downlink & Half-Duplex Analizi:** Gateway'lerin onay (ACK) gönderirken yaşadığı "körlük" (blindness) etkisinin modellenmesi.
-- **İnteraktif Dashboard:** Tüm sonuçların statik görseller yerine modern bir HTML arayüzünde sunulması.
+- **Kaos Simülasyonu (Phase 20):** Donanım arızaları, aktif Jamming (sinyal karıştırma) ve derin sönümlenme (fading) etkilerinin modellenmesi.
+- **Makro-Çeşitlilik (Phase 18):** Bir paketin birden fazla gateway tarafından duyulabilmesi (Redundancy) üzerinden ağ güvenilirliği artırımı.
+- **Inter-SF & Capture Effect (Phase 19):** Farklı SF'lerin birbiriyle girişimi ve güçlü sinyalin çakışmadan kurtulabilme (SIR tabanlı) analizi.
+- **Yüksek Performans:** Binlerce cihazlık trafik analizlerini saniyeler içinde tamamlayan optimize edilmiş çakışma motoru.
 
 ## 📂 Proje Yapısı
 
-- `main.py`: Simülasyonu başlatan ana kontrol merkezi.
-- `simulation.py`: Şehir mimarisi, cihaz yerleşimi ve ADR mantığı.
-- `traffic_sim.py`: Zaman tabanlı paket trafiği ve çakışma (collision/blindness) motoru.
-- `utils.py`: Matematiksel modeller (ToA, Path Loss, SIR, Energy).
-- `visualizer.py`: Profesyonel grafik ve harita üretimi.
-- `html/`: Modern, karanlık mod destekli interaktif analiz dashboard'u.
-- `images/`: Üretilen tüm analiz sonuçlarının toplandığı görsel depo.
+- `core/simulation.py`: Şehir mimarisi, cihaz yerleşimi ve kaos senaryoları.
+- `core/traffic_sim.py`: $O(N \log N)$ hızında optimize edilmiş trafik ve çakışma motoru.
+- `core/utils.py`: Fiziksel katman modelleri (ToA, SIR, Energy, Path Loss).
+- `core/visualizer.py`: 12+ farklı teknik analiz grafiği üreten görselleştirme motoru.
+- `web/`: Modern Dashboard (Flask tabanlı, SSE destekli gerçek zamanlı log akışı).
+- `docs/`: 20 fazın her biri için teknik raporlar.
+- `assets/plots/`: Üretilen güncel analiz görselleri.
 
-## 🚀 Hızlı Başlangıç
+## �️ Kurulum ve Çalıştırma
 
-### 1. Simülasyonu Çalıştırın
-
-Bu komut 1000 cihazlık profesyonel senaryoyu koşturur ve tüm grafikleri üretir:
+### 1. Gereksinimler
 
 ```bash
-python3 main.py
+pip install flask flask-cors numpy matplotlib scipy
 ```
 
-### 2. Dashboard'u Başlatın
+### 2. Uygulamayı Başlatın
 
-Arayüzü görüntülemek için yerel sunucuyu açın:
+Dashboard sunucusunu başlatmak için:
 
 ```bash
-python3 -m http.server 8000
+python3 web/app.py
 ```
 
-Ardından tarayıcınızdan şu adrese gidin:
-🔗 **[http://localhost:8000/html/index.html](http://localhost:8000/html/index.html)**
+Ardından tarayıcınızdan **[http://localhost:8000](http://localhost:8000)** adresine gidin.
 
 ## 📊 Analiz Ekran Görüntüleri
 
-### Çoklu Gateway ve SF Dağılımı
+### Ağ Yedeklilik ve Kaos Analizi
 
-![City Map](assets/plots/city_map_sf_distribution.png)
+![Reliability Map](assets/plots/reliability_heatmap.png)
 
-### Ağ Ölçeklenebilirliği ve Kayıp Analizi
+### Sinyal Kalitesi (RSSI/SNR)
 
-![PDR Analysis](assets/plots/network_pdr_analysis.png)
+![Signal Quality](assets/plots/signal_quality.png)
 
-## � Teknik Rapor
+### Kapsama Isı Haritası
 
-Simülasyonun bilimsel detayları, kullanılan formüller ve 2000 cihaza kadar yapılan stres testi sonuçları için `project_report.md` dosyasını inceleyebilirsiniz.
+![Heatmap](assets/plots/coverage_heatmap.png)
 
 ---
 
-_Bu proje LoRaWAN ağlarının planlanması ve optimizasyonu için bilimsel bir temel sunar._
+_Bu dokümantasyon ve simülasyon, projenin akademik ve mühendislik ispatlarını kayıt altına almak için oluşturulmuştur._
