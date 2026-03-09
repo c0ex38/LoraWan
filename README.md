@@ -52,7 +52,7 @@ pip install numpy matplotlib
 2. Simülasyonu başlatın:
 
 ```bash
-python3 visualizer.py
+python3 main.py
 ```
 
 Grafikler otomatik olarak `images/` klasörüne kaydedilecektir.
