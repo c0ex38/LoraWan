@@ -1,6 +1,7 @@
 import os
 from simulation import SmartCitySimulation
-from visualizer import plot_sf_analysis, plot_theoretical_limits, plot_spatial_distribution, plot_energy_analysis, plot_collision_analysis
+from visualizer import (plot_sf_analysis, plot_theoretical_limits, plot_spatial_distribution, 
+                        plot_energy_analysis, plot_collision_analysis, plot_signal_quality, plot_pdr_analysis)
 
 def main():
     print("--- LoRaWAN SF Analysis Simulation Starting ---")
@@ -25,7 +26,11 @@ def main():
     plot_theoretical_limits()
     plot_spatial_distribution(sim)
     plot_energy_analysis(results)
+    plot_signal_quality(results)
     plot_collision_analysis(results)
+    
+    # 4. Faz 3: Gerçek Zamanlı Trafik ve PDR Analizi
+    plot_pdr_analysis(SmartCitySimulation, area_size=area_size)
 
     print("\n--- Simulation Completed Successfully! ---")
     print("All results and plots can be found in the 'images/' directory.")

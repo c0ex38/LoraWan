@@ -142,6 +142,69 @@ def plot_collision_analysis(results):
     plt.savefig('images/collision_analysis.png')
     print("Collision analysis plot saved as images/collision_analysis.png")
 
+def plot_signal_quality(results):
+    """
+    Mesafe ve SF'ye göre RSSI/SNR dağılımı.
+    """
+    distances = [r['distance'] for r in results]
+    rssis = [r['rssi'] for r in results]
+    snrs = [r['snr'] for r in results]
+    sfs = [r['sf'] for r in results]
+
+    plt.figure(figsize=(12, 5))
+
+    # RSSI vs Distance
+    plt.subplot(1, 2, 1)
+    scatter = plt.scatter(distances, rssis, c=sfs, cmap='viridis', edgecolors='k')
+    plt.title('RSSI vs Distance (Shadowing Effect)')
+    plt.xlabel('Distance (m)')
+    plt.ylabel('RSSI (dBm)')
+    plt.colorbar(scatter, label='SF')
+    plt.grid(True)
+
+    # SNR vs SF
+    plt.subplot(1, 2, 2)
+    plt.boxplot([ [r['snr'] for r in results if r['sf'] == sf] for sf in range(7, 13) ], 
+                tick_labels=range(7, 13))
+    plt.title('SNR Distribution per SF')
+    plt.xlabel('Spreading Factor (SF)')
+    plt.ylabel('SNR (dB)')
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.savefig('images/signal_quality.png')
+    print("Signal quality plot saved as images/signal_quality.png")
+
+def plot_pdr_analysis(sim_class, area_size=5000):
+    """
+    Farklı cihaz yoğunluklarında Packet Delivery Ratio (PDR) analizi.
+    """
+    from traffic_sim import TrafficSimulator
+    
+    device_counts = [20, 50, 100, 200, 500]
+    pdrs = []
+    
+    print("\nRunning Stress Test for PDR Analysis...")
+    for count in device_counts:
+        temp_sim = sim_class(num_bins=count, area_size=area_size)
+        results = temp_sim.run_analysis()
+        traffic = TrafficSimulator(results, duration_seconds=1800) # 30 dk simülasyon
+        traffic.generate_traffic(interval_seconds=300) # 5 dk aralık
+        stats = traffic.run_collision_analysis()
+        pdrs.append(stats['pdr'])
+        print(f"Devices: {count} | PDR: {stats['pdr']:.2f}%")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(device_counts, pdrs, marker='s', color='purple', linewidth=2)
+    plt.axhline(y=90, color='r', linestyle='--', label='90% Reliability Threshold')
+    plt.title('Network Scalability: Packet Delivery Ratio (PDR)')
+    plt.xlabel('Number of Smart Bins')
+    plt.ylabel('PDR (%)')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig('images/network_pdr_analysis.png')
+    print("PDR analysis plot saved as images/network_pdr_analysis.png")
+
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
     sim = SmartCitySimulation(num_bins=50, area_size=7000)

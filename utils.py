@@ -76,3 +76,62 @@ def calculate_collision_probability(num_devices, toa_ms, interval_s):
     g = (num_devices * toa_s) / interval_s
     prob = 1 - math.exp(-2 * g)
     return prob
+
+def check_collision_sir(p1_sf, p2_sf, p1_rssi, p2_rssi):
+    """
+    LoRa SIR (Signal-to-Interference Ratio) tabanlı çakışma kontrolü.
+    Farklı SF'ler birbirine karşı belirli bir koruma sağlar (Orthogonality).
+    """
+    # SIR Thresholds (dB) - Ortak LoRa modellerinden alınmıştır
+    # Aynı SF çakışması için ~6dB fark gerekir.
+    sir_thresholds = {
+        (7, 7): 6, (8, 8): 6, (9, 9): 6, (10, 10): 6, (11, 11): 6, (12, 12): 6,
+        # Farklı SF'ler arası (örnek değerler)
+        (7, 8): -16, (7, 9): -18, (7, 10): -20,
+        (8, 7): -16, (8, 9): -16, (9, 7): -18
+    }
+    
+    threshold = sir_thresholds.get((p1_sf, p2_sf), -20)
+    sir = p1_rssi - p2_rssi
+    
+    # SIR threshold'dan büyükse p1 hayatta kalır
+    return sir > threshold
+
+def calculate_path_loss(distance_m, f_mhz=868, n=3.0, d0=1.0, pl0=14.7):
+    """
+    Log-Distance Path Loss Modeli.
+    PL = PL0 + 10 * n * log10(d/d0) + Shadowing
+    """
+    # Mesafe 0 olamaz
+    dist = max(distance_m, d0)
+    path_loss = pl0 + 10 * n * math.log10(dist / d0)
+    return path_loss
+
+def get_sf_sensitivity(sf, bw=125):
+    """
+    SF bazlı tipik LoRa duyarlılık değerleri (dBm).
+    (SX1276 datasheet bazlı yaklaşık değerler)
+    """
+    sensitivities = {
+        7: -123,
+        8: -126,
+        9: -129,
+        10: -132,
+        11: -134.5,
+        12: -137
+    }
+    return sensitivities.get(sf, -120)
+
+def get_required_snr(sf):
+    """
+    Kayıpsız iletişim için gereken minimum SNR (dB).
+    """
+    snr_table = {
+        7: -7.5,
+        8: -10,
+        9: -12.5,
+        10: -15,
+        11: -17.5,
+        12: -20
+    }
+    return snr_table.get(sf, -5)
