@@ -82,8 +82,8 @@ def run_simulation():
             visualizer.plot_coverage_heatmap(sim, results)
             visualizer.plot_neighborhood_stats(results)
             visualizer.plot_signal_quality(results)
-            visualizer.plot_energy_analysis(results)
-            visualizer.plot_device_type_stats(results) # NEW
+            visualizer.plot_device_type_stats(results)
+            visualizer.plot_academic_constraints(results) # NEW (Faz 15)
             
             if is_full_suite:
                 yield log_yield("İleri Analiz: Teorik limitler ve detaylı PDR stres testi işleniyor...")
@@ -125,7 +125,8 @@ def run_simulation():
                     'img_pdr_path': '/images/network_pdr_analysis.png',
                     'img_energy_path': '/images/energy_analysis.png',
                     'img_signal_path': '/images/signal_quality.png',
-                    'img_device_type_path': '/images/device_type_analysis.png'
+                    'img_device_type_path': '/images/device_type_analysis.png',
+                    'img_academic_path': '/images/academic_constraints.png'
                 }
             }
             yield f"data: RESULT:{json.dumps(final_data)}\n\n"

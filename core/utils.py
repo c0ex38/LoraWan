@@ -135,3 +135,27 @@ def get_required_snr(sf):
         12: -20
     }
     return snr_table.get(sf, -5)
+
+def calculate_duty_cycle_off_time(toa_ms, duty_cycle_limit=0.01):
+    """
+    Yasal %1 Duty Cycle sınırına göre iletim sonrası 'sessizlik' süresini hesaplar.
+    T_off = (T_on / DutyCycle) - T_on
+    """
+    t_on = toa_ms / 1000 # saniyeye çevir
+    t_off = (t_on / duty_cycle_limit) - t_on
+    return t_off # saniye
+
+def get_mtu_limit(sf):
+    """
+    EU868 standartlarına göre SF bazlı Maksimum Payload (MTU) boyutu.
+    SF arttıkça MTU azalır (Veri hızı düştüğü için).
+    """
+    mtu_table = {
+        7: 222,
+        8: 222,
+        9: 115,
+        10: 51,
+        11: 51,
+        12: 51
+    }
+    return mtu_table.get(sf, 51)

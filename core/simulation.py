@@ -1,4 +1,8 @@
-from .utils import calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, calculate_path_loss, get_required_snr, get_sf_sensitivity
+from .utils import (
+    calculate_time_on_air, calculate_bit_rate, calculate_energy_consumption, 
+    calculate_path_loss, get_required_snr, get_sf_sensitivity,
+    calculate_duty_cycle_off_time, get_mtu_limit
+)
 import numpy as np
 
 class SmartCitySimulation:
@@ -116,6 +120,10 @@ class SmartCitySimulation:
             daily_energy = energy * transmissions_per_day
             est_life_days = total_battery_mj / daily_energy if daily_energy > 0 else 0
             
+            # FAZ 15: Duty Cycle ve MTU
+            off_time = calculate_duty_cycle_off_time(toa)
+            mtu = get_mtu_limit(sf)
+
             results.append({
                 'id': i,
                 'type': d_type,
@@ -125,6 +133,8 @@ class SmartCitySimulation:
                 'snr': snr,
                 'gateway_id': self.best_gateways[i],
                 'toa': toa,
+                'off_time': off_time,
+                'mtu_limit': mtu,
                 'energy': energy,
                 'bit_rate': calculate_bit_rate(sf),
                 'battery_life': est_life_days / 365
@@ -133,6 +143,52 @@ class SmartCitySimulation:
             print(f"{d_type:<10} | {sf:<5} | {rssi:<12.1f} | {snr:<10.1f} | {energy:<15.2f}")
             
         return results
+
+    def optimize_gateway_placement(self):
+        """
+        AI Planlama: Mevcut ağdaki zayıf noktaları analiz eder ve 
+        toplam SNR kazancını maksimize edecek en iyi yeni Gateway konumunu önerir.
+        """
+        grid_points = 10 # 10x10 tarama (Akademik hassasiyet)
+        half_size = self.area_size / 2
+        x_coords = np.linspace(-half_size, half_size, grid_points)
+        y_coords = np.linspace(-half_size, half_size, grid_points)
+        
+        best_gain = -1
+        best_coord = (0, 0)
+        current_avg_snr = np.mean(self.bin_snrs) if self.bin_snrs else 0
+        
+        for tx in x_coords:
+            for ty in y_coords:
+                new_gw = np.array([tx, ty])
+                total_new_snr = 0
+                
+                for i, pos in enumerate(self.bin_positions):
+                    # Bu cihaz için yeni GW daha mı iyi sonuç veriyor?
+                    d = np.linalg.norm(pos - new_gw)
+                    d_type = self.device_types[i]
+                    indoor_loss = 20 if d_type == 'WATER' else (5 if d_type == 'BIN' else 0)
+                    
+                    pl = calculate_path_loss(d) + indoor_loss
+                    rssi = self.tx_power - pl
+                    snr = rssi - self.noise_floor
+                    
+                    # Mevcut en iyi SNR ile kıyasla
+                    effective_snr = max(snr, self.bin_snrs[i])
+                    total_new_snr += effective_snr
+                
+                avg_new_snr = total_new_snr / self.num_bins
+                gain = avg_new_snr - current_avg_snr
+                
+                if gain > best_gain:
+                    best_gain = gain
+                    best_coord = (tx, ty)
+        
+        return {
+            'best_coord': [float(best_coord[0]), float(best_coord[1])],
+            'snr_gain': round(best_gain, 2),
+            'recommended': True
+        }
 
 if __name__ == "__main__":
     sim = SmartCitySimulation(num_bins=15)

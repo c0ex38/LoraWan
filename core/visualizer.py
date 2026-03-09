@@ -323,6 +323,40 @@ def plot_neighborhood_stats(results):
     plt.savefig('assets/plots/neighborhood_analysis.png')
     print("Neighborhood analysis saved as assets/plots/neighborhood_analysis.png")
 
+def plot_academic_constraints(results):
+    """
+    SF bazlı yasal Duty Cycle ve MTU limitlerini gösteren akademik grafik.
+    """
+    sfs = sorted(list(set([r['sf'] for r in results])))
+    avg_off_time = []
+    mtus = []
+    
+    for sf in sfs:
+        sf_res = [r for r in results if r['sf'] == sf]
+        avg_off_time.append(np.mean([r['off_time'] for r in sf_res]) if sf_res else 0)
+        mtus.append(sf_res[0]['mtu_limit'] if sf_res else 0)
+        
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    
+    # MTU (Bar)
+    color = 'tab:blue'
+    ax1.set_xlabel('Spreading Factor (SF)')
+    ax1.set_ylabel('Max Payload / MTU (Bytes)', color=color)
+    ax1.bar(sfs, mtus, color=color, alpha=0.4, label='MTU Limit')
+    ax1.tick_params(axis='y', labelcolor=color)
+    
+    # Off-time (Line)
+    ax2 = ax1.twinx()
+    color = 'tab:red'
+    ax2.set_ylabel('Required Off-Time (Seconds)', color=color)
+    ax2.plot(sfs, avg_off_time, color=color, marker='s', linewidth=3, label='Duty Cycle Silence')
+    ax2.tick_params(axis='y', labelcolor=color)
+    
+    plt.title('LoRaWAN Academic Constraints: MTU vs Duty Cycle Privacy')
+    fig.tight_layout()
+    plt.savefig('assets/plots/academic_constraints.png')
+    print("Academic constraints plot saved as assets/plots/academic_constraints.png")
+
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
     sim = SmartCitySimulation(num_bins=50, area_size=7000)

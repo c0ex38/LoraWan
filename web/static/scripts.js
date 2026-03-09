@@ -118,6 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('img_device_type')) {
                 document.getElementById('img_device_type').src = `/images/device_type_analysis.png?t=${t}`;
             }
+            if (document.getElementById('img_academic')) {
+                document.getElementById('img_academic').src = `/images/academic_constraints.png?t=${t}`;
+            }
             
             if (document.getElementById('img_theoretical')) {
                 document.getElementById('img_theoretical').src = `/images/theoretical_limits.png?t=${t}`;
@@ -140,8 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('img_heatmap').src = `/history-images/${simId}/coverage_heatmap.png`;
         document.getElementById('img_neighborhood').src = `/history-images/${simId}/neighborhood_analysis.png`;
         document.getElementById('img_pdr').src = `/history-images/${simId}/network_pdr_analysis.png`;
+        
         if (document.getElementById('img_device_type')) {
             document.getElementById('img_device_type').src = `/history-images/${simId}/device_type_analysis.png`;
+        }
+        if (document.getElementById('img_academic')) {
+            document.getElementById('img_academic').src = `/history-images/${simId}/academic_constraints.png`;
         }
         
         alert(`${simId} detayları yüklendi.`);
