@@ -169,7 +169,10 @@ def run_simulation():
                     'img_device_type_path': '/images/device_type_analysis.png',
                     'img_academic_path': '/images/academic_constraints.png',
                     'img_margin_path': '/images/link_margin_analysis.png',
-                    'img_signal_noise_path': '/images/signal_noise_analysis.png'
+                    'img_signal_noise_path': '/images/signal_noise_analysis.png',
+                    'img_redundancy_path': '/images/gateway_redundancy.png',
+                    'img_spectral_path': '/images/spectral_efficiency.png',
+                    'img_reliability_path': '/images/reliability_heatmap.png'
                 }
             }
             yield f"data: RESULT:{json.dumps(final_data)}\n\n"

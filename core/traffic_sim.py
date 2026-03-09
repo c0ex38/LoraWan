@@ -67,6 +67,9 @@ class TrafficSimulator:
         cross_sf_collisions = 0
         gw_busy_slots = {i: [] for i in range(20)} # Max 20 GW desteği
         
+        # HIZLI ERİŞİM: Cihaz listesini bir map'e al (O(1) erişim için)
+        device_map = {dev['id']: dev for dev in self.devices}
+        
         # Cihaz bazlı başarı takibi
         device_stats = {dev['id']: {'total': 0, 'success': 0} for dev in self.devices}
         
@@ -74,20 +77,17 @@ class TrafficSimulator:
             dev_id = p1['device_id']
             device_stats[dev_id]['total'] += 1
             
-            # Cihazın duyulabildiği tüm gateway'leri kontrol et (Macro-Diversity)
-            all_gw_stats = next(d['all_gw_stats'] for d in self.devices if d['id'] == dev_id)
+            # Cihazın duyulabildiği tüm gateway'leri kontrol et
+            p1_dev = device_map[dev_id]
+            all_gw_stats = p1_dev['all_gw_stats']
             
             packet_received_by_any_gw = False
-            
-            # Bu paket için hata nedenlerini takip et (Görselleştirme için p1'e eklenebilir)
             p1_collision_type = None
             
             for gw_id_str, stats in all_gw_stats.items():
                 gw_id = int(gw_id_str)
-                # RSSI çok düşükse bu gateway zaten duyamaz (-130 dBm altı)
                 if stats['rssi'] < -130: continue
                 
-                # 1. Gateway Körlüğü Kontrolü (Bu spesifik GW için)
                 is_blind = False
                 for busy_start, busy_end in gw_busy_slots[gw_id]:
                     if not (p1['end_time'] < busy_start or p1['start_time'] > busy_end):
@@ -96,31 +96,35 @@ class TrafficSimulator:
                 
                 if is_blind: continue
 
-                # 2. Çakışma Kontrolü (Bu spesifik GW ve Kanal için)
                 collision = False
-                for j, p2 in enumerate(self.packets):
-                    if i == j: continue
-                    # Aynı gateway ve aynı kanalda çakışma riski
-                    overlap = not (p1['end_time'] < p2['start_time'] or p2['end_time'] < p1['start_time'])
-                    same_channel = (p1['channel_id'] == p2['channel_id'])
-                    
-                    # ÖNEMLİ: P2 de bu Gateway tarafından duyuluyor mu?
-                    p2_dev = next((d for d in self.devices if d['id'] == p2['device_id']), None)
-                    if not p2_dev: continue
-                    p2_at_this_gw = p2_dev['all_gw_stats'].get(str(gw_id))
-                    
-                    if overlap and same_channel and p2_at_this_gw:
-                        # LoRa PHY: P1 paketi bu girişimden kurtulabilir mi? (SIR Analizi)
-                        p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_at_this_gw['rssi'])
-                        
-                        if not p1_survives:
-                            collision = True
-                            # Hata tipi tayini
-                            if p1['sf'] == p2['sf']:
-                                p1_collision_type = 'CO_SF'
-                            else:
-                                p1_collision_type = 'CROSS_SF'
-                            break
+                # Sadece Zaman Olarak Çakışma İhtimali Olanları Kontrol Et
+                # İleriye doğru
+                for j in range(i + 1, len(self.packets)):
+                    p2 = self.packets[j]
+                    if p2['start_time'] >= p1['end_time']: break
+                    if p1['channel_id'] == p2['channel_id']:
+                        p2_dev = device_map.get(p2['device_id'])
+                        if p2_dev and p2_dev['all_gw_stats'].get(str(gw_id)):
+                            p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi'])
+                            if not p1_survives:
+                                collision = True
+                                p1_collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
+                                break
+                
+                if collision: continue
+                
+                # Geriye doğru
+                for j in range(i - 1, -1, -1):
+                    p2 = self.packets[j]
+                    if p2['end_time'] <= p1['start_time']: break
+                    if p1['channel_id'] == p2['channel_id']:
+                        p2_dev = device_map.get(p2['device_id'])
+                        if p2_dev and p2_dev['all_gw_stats'].get(str(gw_id)):
+                            p1_survives = check_collision_sir(p1['sf'], p2['sf'], stats['rssi'], p2_dev['all_gw_stats'][str(gw_id)]['rssi'])
+                            if not p1_survives:
+                                collision = True
+                                p1_collision_type = 'CO_SF' if p1['sf'] == p2['sf'] else 'CROSS_SF'
+                                break
                 
                 if not collision:
                     # Bu gateway paketi başarıyla aldı! (Belki capture effect sayesinde, belki de temiz kanal)

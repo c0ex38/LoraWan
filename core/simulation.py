@@ -139,9 +139,6 @@ class SmartCitySimulation:
         battery_mah = 2500
         voltage = 3.3
         
-        print(f"{'Bin ID':<10} | {'SF':<5} | {'RSSI (dBm)':<12} | {'SNR (dB)':<10} | {'Energy (mJ)':<15}")
-        print("-" * 75)
-        
         for i in range(self.num_bins):
             sf = self.bin_sfs[i]
             rssi = self.bin_rssis[i]
@@ -153,30 +150,23 @@ class SmartCitySimulation:
             
             total_battery_mj = battery_mah * voltage * 3600
             
-            # Cihaz Tipine Göre Veri Gönderim Sıklığı
             if d_type == 'LIGHT':
-                transmissions_per_day = 144 # 10 dakikada bir
+                transmissions_per_day = 144
             elif d_type == 'AIR':
-                transmissions_per_day = 48 # 30 dakikada bir
+                transmissions_per_day = 48
             elif d_type == 'WATER':
-                transmissions_per_day = 1 # Günde 1 kez
-            else: # BIN
-                transmissions_per_day = 4 # 6 saatte bir
+                transmissions_per_day = 1
+            else:
+                transmissions_per_day = 4
                 
             daily_energy = energy * transmissions_per_day
             est_life_days = total_battery_mj / daily_energy if daily_energy > 0 else 0
             
-            # FAZ 15: Duty Cycle ve MTU
             off_time = calculate_duty_cycle_off_time(toa)
             mtu = get_mtu_limit(sf)
-            
-            # FAZ 16: Link Margin
             margin = calculate_link_margin(snr, sf)
-            
-            # FAZ 17: Noise Floor
             noise_floor = calculate_noise_floor()
 
-            
             results.append({
                 'id': i,
                 'type': d_type,
@@ -184,8 +174,8 @@ class SmartCitySimulation:
                 'failure_reason': self.failure_reasons[i],
                 'distance': self.distances[i],
                 'sf': sf,
-                'rssi': self.bin_rssis[i],
-                'snr': self.bin_snrs[i],
+                'rssi': rssi,
+                'snr': snr,
                 'all_gw_stats': self.all_gw_stats[i],
                 'link_margin': margin,
                 'noise_floor': noise_floor,
@@ -197,8 +187,6 @@ class SmartCitySimulation:
                 'bit_rate': calculate_bit_rate(sf),
                 'battery_life': est_life_days / 365
             })
-            
-            print(f"{d_type:<10} | {sf:<5} | {rssi:<12.1f} | {snr:<10.1f} | {energy:<15.2f}")
             
         return results
 

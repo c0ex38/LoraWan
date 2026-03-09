@@ -481,6 +481,10 @@ def plot_gateway_redundancy(sim):
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.legend()
     
+    plt.savefig('assets/plots/gateway_redundancy.png', dpi=150, bbox_inches='tight')
+    plt.close('all')
+    print("Gateway redundancy plot saved as assets/plots/gateway_redundancy.png")
+
 def plot_spectral_efficiency(traffic_results):
     """
     Kanal Verimliliği ve Çakışma Türleri Analizi.
@@ -510,6 +514,10 @@ def plot_spectral_efficiency(traffic_results):
     
     plt.title("Ağ Spektral Verimlilik ve Girişim Dağılımı\nFaz 19: Capture Effect & Inter-SF Analizi")
     plt.axis('equal')
+    
+    plt.savefig('assets/plots/spectral_efficiency.png', dpi=150, bbox_inches='tight')
+    plt.close('all')
+    print("Spectral efficiency plot saved as assets/plots/spectral_efficiency.png")
     
 def plot_reliability_heatmap(sim):
     """
