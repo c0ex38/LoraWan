@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoRaWAN Network Analytics Dashboard</title>
+    <title>LoRaWAN Ağ Analiz Paneli</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,103 +13,155 @@
     <div class="dashboard">
         <!-- Sidebar -->
         <aside>
-            <div class="logo">LoRaSim PRO</div>
-            <nav>
-                <ul>
-                    <li class="active"><span>📊</span> Dashboard</li>
-                    <li><span>🗺️</span> Network Map</li>
-                    <li><span>📉</span> Scalability</li>
-                    <li><span>🔋</span> Energy Analysis</li>
-                </ul>
-            </nav>
+            <div class="logo-container" style="text-align: center; margin-bottom: 2rem;">
+                <div class="logo" style="font-size: 1.5rem; font-weight: 800; letter-spacing: -1px; color: var(--primary);">BELEDİYE</div>
+                <div style="font-size: 0.6rem; color: var(--text-muted); letter-spacing: 2px; margin-top: 4px; font-weight: 600;">AKILLI ŞEHİR YÖNETİMİ</div>
+            </div>
 
             <div class="sim-settings" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-                <h3 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Simulation Settings</h3>
+                <h3 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Simülasyon Ayarları</h3>
                 <div style="margin-top: 1.5rem;">
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">Number of Bins</label>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Cihaz Sayısı (Bin)</label>
                     <input type="range" id="num_bins" min="10" max="2000" value="100" style="width: 100%; margin: 10px 0;">
                     <span id="bins_val" style="font-size: 0.9rem; font-weight: bold;">100</span>
                 </div>
                 <div style="margin-top: 1rem;">
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">Gateways</label>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Gateway Sayısı</label>
                     <input type="range" id="num_gateways" min="1" max="8" value="4" style="width: 100%; margin: 10px 0;">
                     <span id="gateways_val" style="font-size: 0.9rem; font-weight: bold;">4</span>
                 </div>
                 <div style="margin-top: 1rem;">
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">Area (km²)</label>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Alan Büyüklüğü (km²)</label>
                     <input type="range" id="area_size" min="1000" max="15000" step="1000" value="5000" style="width: 100%; margin: 10px 0;">
                     <span id="area_val" style="font-size: 0.9rem; font-weight: bold;">5.0</span>
                 </div>
-                <button id="run_sim_btn" class="card" style="width: 100%; margin-top: 2rem; background: var(--primary); color: white; cursor: pointer; border: none; padding: 10px; font-weight: bold;">RUN SIMULATION</button>
+                <button id="run_sim_btn" class="card" style="width: 100%; margin-top: 1rem; background: var(--primary); color: white; cursor: pointer; border: none; padding: 12px; font-weight: bold; transition: all 0.3s ease;">TEMEL SİMÜLASYONU BAŞLAT</button>
+                <button id="run_full_sim_btn" class="card" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1px solid var(--primary); color: var(--primary); cursor: pointer; padding: 12px; font-weight: bold; transition: all 0.3s ease;">🚀 TAM ANALİZİ BAŞLAT</button>
+            </div>
+
+            <!-- Simulation History -->
+            <div class="sim-history" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <h3 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem;">Simülasyon Geçmişi</h3>
+                <div id="history_list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- History items will be injected here -->
+                    <p style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Henüz kayıt yok...</p>
+                </div>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main>
             <header>
-                <h1>Network Analytics</h1>
-                <p class="subtitle">Smart City Trash Bin Simulation - Phase 6 Results</p>
+                <h1>Operasyon Merkezi</h1>
+                <p class="subtitle">Sıfır Atık Vizyonu - Akıllı Atık Yönetim Sistemi</p>
             </header>
+
+            <!-- Simulation Console -->
+            <section class="console-section" style="margin-bottom: 2rem;">
+                <div class="card" style="background: #0f172a; border: 1px solid #1e293b; padding: 0;">
+                    <div style="background: #1e293b; padding: 8px 15px; display: flex; align-items: center; gap: 8px; border-radius: 12px 12px 0 0;">
+                        <div style="display: flex; gap: 5px;">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background: #ff5f56;"></div>
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffbd2e;"></div>
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background: #27c93f;"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #94a3b8; font-family: monospace; font-weight: bold;">İŞLEM GÜNLÜĞÜ (SIM_CONSOLE)</span>
+                    </div>
+                    <div id="sim_logs" style="height: 150px; overflow-y: auto; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85rem; color: #4ade80; line-height: 1.5;">
+                        > Sistem hazır. Simülasyonu başlatmak için butona basın...
+                    </div>
+                </div>
+            </section>
 
             <!-- KPI Cards -->
             <section class="stats-grid">
-                <div class="card">
-                    <span class="stat-label">Total Devices</span>
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <span class="stat-label">Aktif Konteynır</span>
                     <span id="stat_bins" class="stat-value">1,000</span>
                 </div>
-                <div class="card">
-                    <span class="stat-label">Gateways</span>
-                    <span id="stat_gateways" class="stat-value" style="color: var(--secondary);">4</span>
+                <div class="card" style="border-left: 4px solid var(--secondary);">
+                    <span class="stat-label">Yıllık Tahmini Tasarruf</span>
+                    <span id="stat_savings" class="stat-value" style="color: var(--secondary);">₺0K</span>
                 </div>
-                <div class="card">
-                    <span class="stat-label">Avg Success Rate (PDR)</span>
-                    <span id="stat_pdr" class="stat-value" style="color: var(--accent);">98.9%</span>
+                <div class="card" style="border-left: 4px solid var(--accent);">
+                    <span class="stat-label">Saha Verimliliği (PDR)</span>
+                    <span id="stat_pdr" class="stat-value" style="color: var(--accent);">0.0%</span>
                 </div>
-                <div class="card">
-                    <span class="stat-label">Packet Loss (Blindness)</span>
-                    <span id="stat_blindness" class="stat-value" style="color: #ef4444;">11.2%</span>
+                <div class="card" style="border-left: 4px solid #ef4444;">
+                    <span class="stat-label">Kayıp Veri Oranı</span>
+                    <span id="stat_blindness" class="stat-value" style="color: #ef4444;">0.0%</span>
                 </div>
             </section>
 
             <!-- Main Visuals -->
+            <!--
+                    <li class="active"><span>📊</span> Panel</li>
+                    <li><span>🗺️</span> Ağ Haritası</li>
+                    <li><span>📉</span> Ölçeklenebilirlik</li>
+                    <li><span>🔋</span> Enerji Analizi</li>
+            -->
             <section class="visual-section">
                 <div class="map-container">
-                    <h3>Multi-Gateway Spatial Distribution</h3>
-                    <p class="subtitle" style="margin-bottom: 1rem;">Real-time ADR mapping with Shadowing effects</p>
+                    <h3>Konteynır Dağılım Haritası</h3>
+                    <p class="subtitle" style="margin-bottom: 1rem;">Bölge bazlı doluluk iletim kapsama analizi</p>
                     <img id="img_map" src="/images/city_map_sf_distribution.png" alt="Ağ Haritası">
                 </div>
 
                 <div class="chart-card">
-                    <h3>Scalability & Blindness</h3>
+                    <h3>Ölçeklenebilirlik & Körlük Analizi</h3>
                     <img id="img_pdr" src="/images/network_pdr_analysis.png" alt="PDR Analizi">
                 </div>
 
                 <div class="chart-card">
-                    <h3>Energy & Battery Life</h3>
+                    <h3>Enerji & Pil Ömrü</h3>
                     <img id="img_energy" src="/images/energy_analysis.png" alt="Enerji Analizi">
                 </div>
 
                 <div class="chart-card">
-                    <h3>Signal Quality (Shadowing)</h3>
+                    <h3>Sinyal Kalitesi (Gölgeleme Etkisi)</h3>
                     <img id="img_signal" src="/images/signal_quality.png" alt="Sinyal Kalitesi">
                 </div>
 
                 <div class="chart-card">
-                    <h3>Theoretical Limits</h3>
-                    <img src="../images/theoretical_limits.png" alt="Teorik Limitler">
+                    <h3>Teorik Sınırlar</h3>
+                    <img id="img_theoretical" src="/images/theoretical_limits.png" alt="Teorik Limitler">
+                </div>
+            </section>
+
+            <!-- Municipal Insights Section -->
+            <section class="education-section" style="margin-top: 3rem;">
+                <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                    <span>🏛️</span> Belediye Operasyonel Avantajları
+                </h2>
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent);">
+                        <h3 style="color: var(--primary); margin-bottom: 0.8rem;">⛽ Akaryakıt Tasarrufu</h3>
+                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
+                            Sadece doluluk oranı %80 ve üzeri olan konteynırlara rota çizilerek, gereksiz seferler engellenir. LoRaWAN sayesinde bu veri düşük maliyetle toplanır.
+                        </p>
+                    </div>
+
+                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);">
+                        <h3 style="color: var(--secondary); margin-bottom: 0.8rem;">👷 Personel Verimliliği</h3>
+                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
+                            Sahadaki ekiplerin çalışma saatleri, veriye dayalı planlama ile optimize edilir. Şehir genelindeki <strong>Gateway</strong> istasyonları bu verinin kesintisiz akışını sağlar.
+                        </p>
+                    </div>
+
+                    <div class="card education-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent);">
+                        <h3 style="color: var(--accent); margin-bottom: 0.8rem;">♻️ Çevresel Etki (Sıfır Atık)</h3>
+                        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
+                            Taşan konteynırların hızla fark edilmesiyle çevre kirliliği minimize edilir. <strong>PDR</strong> oranının yüksek tutulması, bu çevresel kontrolün sürekliliği için hayati önemdedir.
+                        </p>
+                    </div>
                 </div>
             </section>
 
             <!-- Report Section View -->
-            <section class="report-content">
-                <h2>Technical Insights</h2>
-                <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan 4 Gateway sayesinde PDR oranı %98 seviyesinde tutulabilmiştir.</p>
-                <button class="card" style="margin-top: 1rem; cursor: pointer; color: var(--primary);">View Full Technical Report</button>
+            <section class="report-content" style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                <h2>Teknik Analiz & Görüşler</h2>
+                <p>Simülasyon sonuçları, LoRaWAN ağlarında kapasitenin önündeki en büyük engelin <strong>"Gateway Körlüğü" (Half-Duplex)</strong> olduğunu göstermektedir. Şehir genelinde dağıtılan Gateway'ler sayesinde PDR oranı optimize edilmiştir.</p>
             </section>
-
-            <footer>
-                <p>&copy; 2026 LoRaWAN SF Analysis Simulation Framework. Designed for Advanced Network Planning.</p>
-            </footer>
         </main>
     </div>
     <script src="/static/scripts.js"></script>

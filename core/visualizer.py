@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg') # Flask/Thread güvenliği için GUI olmayan backend kullan
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from .utils import calculate_time_on_air, calculate_bit_rate
@@ -91,8 +91,14 @@ def plot_energy_analysis(results):
     for sf in sfs:
         energies = [r['energy'] for r in results if r['sf'] == sf]
         lives = [r['battery_life'] for r in results if r['sf'] == sf]
-        avg_energy.append(np.mean(energies))
-        avg_life.append(np.mean(lives))
+        
+        if energies:
+            avg_energy.append(np.mean(energies))
+            avg_life.append(np.mean(lives))
+        else:
+            # Bu SF için veri yoksa 0 veya None ekle
+            avg_energy.append(0)
+            avg_life.append(0)
 
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
@@ -125,8 +131,12 @@ def plot_collision_analysis(results):
     
     plt.figure(figsize=(10, 6))
     
-    # SF10 için ortalama ToA kullanalım
-    avg_toa = np.mean([r['toa'] for r in results if r['sf'] == 10])
+    # SF10 için ortalama ToA kullanalım (Eğer yoksa mevcut SF'lerin ortalamasını al)
+    sfs_10_toas = [r['toa'] for r in results if r['sf'] == 10]
+    if sfs_10_toas:
+        avg_toa = np.mean(sfs_10_toas)
+    else:
+        avg_toa = np.mean([r['toa'] for r in results]) if results else 100
     
     for interval, label in zip(intervals, labels):
         probs = [calculate_collision_probability(n, avg_toa, interval) * 100 for n in device_counts]

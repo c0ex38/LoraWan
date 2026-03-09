@@ -6,9 +6,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 import json
+import time
+import os
+import shutil
+from datetime import datetime
 from core.simulation import SmartCitySimulation
 from core.traffic_sim import TrafficSimulator
 from core import visualizer
@@ -18,6 +22,7 @@ CORS(app)
 
 # Resim dizinini belirle
 IMAGES_DIR = os.path.join(BASE_DIR, 'assets', 'plots')
+HISTORY_DIR = os.path.join(BASE_DIR, 'assets', 'history')
 
 @app.route('/')
 def index():
@@ -29,56 +34,141 @@ def send_html(path):
 
 @app.route('/images/<path:path>')
 def send_images(path):
+    print(f"Serving image: {path} from {IMAGES_DIR}")
     return send_from_directory(IMAGES_DIR, path)
 
 @app.route('/api/run-simulation', methods=['POST'])
 def run_simulation():
-    try:
-        data = request.json
-        num_bins = int(data.get('num_bins', 100))
-        area_size = int(data.get('area_size', 5000))
-        num_gateways = int(data.get('num_gateways', 4))
-        
-        print(f"Running simulation: {num_bins} bins, {area_size}m, {num_gateways} GWs")
-        
-        # 1. Simülasyonu çalıştır
-        sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size, num_gateways=num_gateways)
-        results = sim.run_analysis()
-        
-        # 2. Trafik Analizi
-        traffic = TrafficSimulator(results, duration_seconds=1800)
-        traffic.generate_traffic(interval_seconds=300)
-        stats = traffic.run_collision_analysis()
-        
-        # 3. Grafikleri Güncelle
-        visualizer.plot_spatial_distribution(sim)
-        visualizer.plot_signal_quality(results)
-        visualizer.plot_energy_analysis(results)
-        visualizer.plot_pdr_analysis(SmartCitySimulation, area_size=area_size) # PDR analizi tüm sınıfı kullanır
-        
-        # 4. Yanıtı hazırla
-        response = {
-            'status': 'success',
-            'stats': {
+    data = request.json
+    num_bins = int(data.get('num_bins', 100))
+    area_size = int(data.get('area_size', 5000))
+    num_gateways = int(data.get('num_gateways', 4))
+    is_full_suite = data.get('full_suite', False)
+
+    def generate():
+        logs = []
+        def log_yield(msg):
+            logs.append(msg)
+            return f"data: {msg}\n\n"
+
+        try:
+            yield log_yield(f"Simülasyon başlatılıyor (Mod: {'Tam Analiz' if is_full_suite else 'Temel'})...")
+            
+            # 1. Simülasyon
+            yield log_yield(f"{num_bins} adet akıllı çöp kutusu {area_size}m² alana yerleştiriliyor...")
+            time.sleep(0.5) 
+            sim = SmartCitySimulation(num_bins=num_bins, area_size=area_size, num_gateways=num_gateways)
+            
+            yield log_yield(f"{num_gateways} Gateway için sinyal yayılım ve gölgeleme modelleri hesaplanıyor...")
+            results = sim.run_analysis()
+            
+            yield log_yield("ADR Optimizasyonu: Sinyal kalitesine göre SF atamaları yapılıyor...")
+            
+            # 2. Trafik
+            yield log_yield("30 dakikalık trafik örüntüsü oluşturuluyor (5 dakikalık aralıklarla)...")
+            traffic = TrafficSimulator(results, duration_seconds=1800)
+            traffic.generate_traffic(interval_seconds=300)
+            
+            yield log_yield("Paket çakışmaları ve Gateway körlüğü (Half-Duplex) analiz ediliyor...")
+            stats = traffic.run_collision_analysis()
+            
+            # 3. Grafikler
+            yield log_yield("Mekansal dağılım haritası oluşturuluyor...")
+            visualizer.plot_spatial_distribution(sim)
+            
+            yield log_yield("Sinyal kalitesi ve enerji tüketimi grafikleri üretiliyor...")
+            visualizer.plot_signal_quality(results)
+            visualizer.plot_energy_analysis(results)
+            
+            if is_full_suite:
+                yield log_yield("Tam Analiz Modu: Stres testleri ve teorik limitler işleniyor...")
+                visualizer.plot_theoretical_limits()
+                visualizer.plot_collision_analysis(results)
+                visualizer.plot_pdr_analysis(SmartCitySimulation, area_size=area_size) 
+            
+            yield log_yield("Tüm simülasyon adımları başarıyla tamamlandı.")
+            
+            # Final sonuçları JSON olarak gönder
+            stats_data = {
                 'num_bins': num_bins,
                 'num_gateways': num_gateways,
                 'pdr': round(stats['pdr'], 2),
                 'blindness': stats['blindness'],
                 'collision': stats['collision'],
-                'img_map_path': '/images/city_map_sf_distribution.png',
-                'img_pdr_path': '/images/network_pdr_analysis.png',
-                'img_energy_path': '/images/energy_analysis.png',
-                'img_signal_path': '/images/signal_quality.png'
             }
-        }
-        return jsonify(response)
+            
+            # --- ARŞİVLEME (NEW) ---
+            sim_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            history_path = os.path.join(HISTORY_DIR, f"sim_{sim_id}")
+            os.makedirs(os.path.join(history_path, "plots"), exist_ok=True)
+            
+            # Parametreleri ve Sonuçları Kaydet
+            with open(os.path.join(history_path, "params.json"), "w") as f:
+                json.dump(data, f)
+            with open(os.path.join(history_path, "results.json"), "w") as f:
+                json.dump({'stats': stats_data, 'logs': logs}, f)
+            
+            # Grafikleri Kopyala
+            for plot_file in os.listdir(IMAGES_DIR):
+                if plot_file.endswith(".png"):
+                    shutil.copy(os.path.join(IMAGES_DIR, plot_file), os.path.join(history_path, "plots", plot_file))
+            # -----------------------
+
+            final_data = {
+                'status': 'success',
+                'sim_id': sim_id,
+                'stats': {
+                    **stats_data,
+                    'img_map_path': '/images/city_map_sf_distribution.png',
+                    'img_pdr_path': '/images/network_pdr_analysis.png',
+                    'img_energy_path': '/images/energy_analysis.png',
+                    'img_signal_path': '/images/signal_quality.png'
+                }
+            }
+            yield f"data: RESULT:{json.dumps(final_data)}\n\n"
+            
+        except Exception as e:
+            yield f"data: HATA: {str(e)}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    if not os.path.exists(HISTORY_DIR):
+        return jsonify([])
+    
+    history_list = []
+    for folder in sorted(os.listdir(HISTORY_DIR), reverse=True):
+        if folder.startswith("sim_"):
+            try:
+                with open(os.path.join(HISTORY_DIR, folder, "results.json"), "r") as f:
+                    data = json.load(f)
+                    history_list.append({
+                        'id': folder,
+                        'date': datetime.strptime(folder.replace("sim_", ""), "%Y%m%d_%H%M%S").strftime("%Y-%m-%d %H:%M:%S"),
+                        'pdr': data['stats']['pdr'],
+                        'devices': data['stats']['num_bins']
+                    })
+            except:
+                continue
+    return jsonify(history_list)
+
+@app.route('/api/history/<sim_id>', methods=['GET'])
+def get_history_detail(sim_id):
+    path = os.path.join(HISTORY_DIR, sim_id)
+    if not os.path.exists(path):
+        return jsonify({'status': 'error', 'message': 'Not found'}), 404
         
-    except Exception as e:
-        print(f"Simulation Error: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    with open(os.path.join(path, "results.json"), "r") as f:
+        return jsonify(json.load(f))
+
+# Geçmiş grafiklerini servis et
+@app.route('/history-images/<sim_id>/<path:filename>')
+def serve_history_image(sim_id, filename):
+    return send_from_directory(os.path.join(HISTORY_DIR, sim_id, "plots"), filename)
 
 if __name__ == '__main__':
-    # Resim klasörü yoksa oluştur
-    if not os.path.exists(IMAGES_DIR):
-        os.makedirs(IMAGES_DIR)
+    # Klasörler yoksa oluştur
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    os.makedirs(HISTORY_DIR, exist_ok=True)
     app.run(host='0.0.0.0', port=8000, debug=True)
