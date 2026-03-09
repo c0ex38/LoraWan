@@ -24,8 +24,8 @@ def plot_sf_analysis(results):
 
     plt.title('LoRaWAN SF Analysis: Time on Air vs Data Rate')
     fig.tight_layout()
-    plt.savefig('sf_analysis_plot.png')
-    print("Graph saved as sf_analysis_plot.png")
+    plt.savefig('images/sf_analysis_plot.png')
+    print("Graph saved as images/sf_analysis_plot.png")
 
 def plot_theoretical_limits():
     sfs = range(7, 13)
@@ -47,8 +47,8 @@ def plot_theoretical_limits():
     plt.ylabel('bps')
 
     plt.tight_layout()
-    plt.savefig('theoretical_limits.png')
-    print("Theoretical limits graph saved as theoretical_limits.png")
+    plt.savefig('images/theoretical_limits.png')
+    print("Theoretical limits graph saved as images/theoretical_limits.png")
 
 def plot_spatial_distribution(sim):
     """
@@ -79,8 +79,8 @@ def plot_spatial_distribution(sim):
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.legend()
     plt.axis('equal')
-    plt.savefig('city_map_sf_distribution.png')
-    print("City map saved as city_map_sf_distribution.png")
+    plt.savefig('images/city_map_sf_distribution.png')
+    print("City map saved as images/city_map_sf_distribution.png")
 
 def plot_energy_analysis(results):
     """
@@ -139,8 +139,8 @@ def plot_collision_analysis(results):
     plt.ylabel('Collision Probability (%)')
     plt.grid(True)
     plt.legend()
-    plt.savefig('collision_analysis.png')
-    print("Collision analysis plot saved as collision_analysis.png")
+    plt.savefig('images/collision_analysis.png')
+    print("Collision analysis plot saved as images/collision_analysis.png")
 
 if __name__ == "__main__":
     from simulation import SmartCitySimulation
